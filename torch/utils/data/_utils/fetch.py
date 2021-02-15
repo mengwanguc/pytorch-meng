@@ -21,6 +21,7 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
         self.dataset_iter = iter(dataset)
 
     def fetch(self, possibly_batched_index):
+        print("_IterableDatasetFetcher")
         if self.auto_collation:
             data = []
             for _ in possibly_batched_index:
@@ -40,6 +41,24 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
 
     def fetch(self, possibly_batched_index):
+        print("_MapDatasetFetcher")
+        print("self.dataset type:{}".format(type(self.dataset).__name__))
+        if hasattr(self.dataset, 'is_meng') and self.dataset.is_meng == True:
+            print("	using MengImageFolder....!!!")
+            if self.auto_collation:
+                data = []
+                for idx in possibly_batched_index:
+                    temp_data, class_index = self.dataset[idx]
+                    for per_image_data in temp_data:
+                        per_image = per_image_data, class_index
+                        data.append(per_image)
+                        print('\n\n\n')
+                        print(per_image)
+            else:
+                data = self.dataset[possibly_batched_index]
+            return self.collate_fn(data)
+            
+
         if self.auto_collation:
             data = [self.dataset[idx] for idx in possibly_batched_index]
         else:
