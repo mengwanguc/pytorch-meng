@@ -41,10 +41,11 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
 
     def fetch(self, possibly_batched_index):
-        print("_MapDatasetFetcher")
-        print("self.dataset type:{}".format(type(self.dataset).__name__))
-        if hasattr(self.dataset, 'is_meng') and self.dataset.is_meng == True:
-            print("	using MengImageFolder....!!!")
+#        print("_MapDatasetFetcher")
+#        print("self.dataset type:{}".format(type(self.dataset).__name__))
+
+        if hasattr(self.dataset, 'is_zip') and self.dataset.is_zip == True:
+            print("	using zip loader....!!!")
             if self.auto_collation:
                 data = []
                 for idx in possibly_batched_index:
@@ -52,10 +53,46 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
                     for per_image_data in temp_data:
                         per_image = per_image_data, class_index
                         data.append(per_image)
-                        print('\n\n\n')
-                        print(per_image)
+#                        print('\n\n\n')
+#                        print(per_image)
             else:
                 data = self.dataset[possibly_batched_index]
+ #           print("data size {}".format(len(data)))
+            return self.collate_fn(data)
+
+        if hasattr(self.dataset, 'is_tar') and self.dataset.is_tar == True:
+            print("	using tar loader....!!!")
+            if self.auto_collation:
+                data = []
+                for idx in possibly_batched_index:
+                    temp_data, class_index = self.dataset[idx]
+                    for per_image_data in temp_data:
+                        per_image = per_image_data, class_index
+                        data.append(per_image)
+#                        print('\n\n\n')
+#                        print(per_image)
+            else:
+                data = self.dataset[possibly_batched_index]
+ #           print("data size {}".format(len(data)))
+            return self.collate_fn(data)
+
+
+        if hasattr(self.dataset, 'is_meng') and self.dataset.is_meng == True:
+            print("	using MengImageFolder....!!!")
+            if self.auto_collation:
+                print("    auto_collation")
+                data = []
+                for idx in possibly_batched_index:
+                    temp_data, class_index = self.dataset[idx]
+                    for per_image_data in temp_data:
+                        per_image = per_image_data, class_index
+                        data.append(per_image)
+#                        print('\n\n\n')
+#                        print(per_image)
+            else:
+                print("    not auto_collation!!!!!")
+                data = self.dataset[possibly_batched_index]
+#            print("data size {}".format(len(data)))
             return self.collate_fn(data)
             
 
@@ -63,4 +100,5 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             data = [self.dataset[idx] for idx in possibly_batched_index]
         else:
             data = self.dataset[possibly_batched_index]
+#        print("data size {}".format(len(data)))
         return self.collate_fn(data)

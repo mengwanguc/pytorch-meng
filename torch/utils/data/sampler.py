@@ -111,6 +111,7 @@ class RandomSampler(Sampler[int]):
         return self._num_samples
 
     def __iter__(self):
+        print("using random sampler...\n")
         n = len(self.data_source)
         if self.generator is None:
             generator = torch.Generator()
@@ -122,7 +123,18 @@ class RandomSampler(Sampler[int]):
                 yield from torch.randint(high=n, size=(32,), dtype=torch.int64, generator=generator).tolist()
             yield from torch.randint(high=n, size=(self.num_samples % 32,), dtype=torch.int64, generator=generator).tolist()
         else:
-            yield from torch.randperm(n, generator=self.generator).tolist()
+            m = 1
+            k = int(n/m)
+            temp = torch.randperm(k, generator=self.generator).tolist()
+            res = []
+            for i in range(k):
+                for j in range(m):
+                    res.append(temp[i]*m+j)
+            for i in range(k*m, n):
+                res.append(i)
+            print("m:{} n:{} len(res):{}".format(m, n, len(res)))
+      #      print(res)
+            yield from res
 
     def __len__(self):
         return self.num_samples
