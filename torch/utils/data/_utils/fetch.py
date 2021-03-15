@@ -45,7 +45,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
 #        print("self.dataset type:{}".format(type(self.dataset).__name__))
 
         if hasattr(self.dataset, 'is_zip') and self.dataset.is_zip == True:
-            print("	using zip loader....!!!")
+#            print("	using zip loader....!!!")
             if self.auto_collation:
                 data = []
                 for idx in possibly_batched_index:
@@ -61,7 +61,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             return self.collate_fn(data)
 
         if hasattr(self.dataset, 'is_tar') and self.dataset.is_tar == True:
-            print("	using tar loader....!!!")
+   #         print("	using tar loader....!!!")
             if self.auto_collation:
                 data = []
                 for idx in possibly_batched_index:

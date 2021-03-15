@@ -939,6 +939,10 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._worker_pids_set = True
         self._reset(loader, first_iter=True)
 
+    def num_ready_batches(self):
+        #print("meng!!!")
+        return self._data_queue.qsize()
+
     def _reset(self, loader, first_iter=False):
         super()._reset(loader, first_iter)
         self._send_idx = 0  # idx of the next task to be sent to workers

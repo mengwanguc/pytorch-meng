@@ -91,6 +91,16 @@ class RandomSampler(Sampler[int]):
         self._num_samples = num_samples
         self.generator = generator
 
+        n = len(self.data_source)
+        if self.generator is None:
+            generator = torch.Generator()
+            generator.manual_seed(int(torch.empty((), dtype=torch.int64).random_().item()))
+        else:
+            generator = self.generator
+
+        self.default_order = torch.randperm(n, generator=self.generator).tolist()
+        #print(self.default_order)
+
         if not isinstance(self.replacement, bool):
             raise TypeError("replacement should be a boolean value, but got "
                             "replacement={}".format(self.replacement))
@@ -129,11 +139,12 @@ class RandomSampler(Sampler[int]):
             res = []
             for i in range(k):
                 for j in range(m):
-                    res.append(temp[i]*m+j)
+                    res.append(self.default_order[temp[i]*m+j])
             for i in range(k*m, n):
-                res.append(i)
-            print("m:{} n:{} len(res):{}".format(m, n, len(res)))
-      #      print(res)
+                res.append(self.default_order[i])
+            #print("m:{} n:{} len(res):{}".format(m, n, len(res)))
+#            print(res)
+#            print(len(res))
             yield from res
 
     def __len__(self):
