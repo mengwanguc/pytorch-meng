@@ -2,6 +2,7 @@ r""""Contains definitions of the methods used by the _BaseDataLoaderIter to fetc
 data from an iterable-style or map-style dataset. This logic is shared in both
 single- and multi-processing data loading.
 """
+import concurrent.futures
 
 
 class _BaseDatasetFetcher(object):
@@ -34,14 +35,31 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
             data = next(self.dataset_iter)
         return self.collate_fn(data)
 
+def same(x):
+    return x
 
 class _MapDatasetFetcher(_BaseDatasetFetcher):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
 
+    def getitem(self, idx):
+        return self.dataset[idx]
+#        return idx
+
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
-            data = [self.dataset[idx] for idx in possibly_batched_index]
+            print("self.auto_collation")
+            if False:
+                data = [self.dataset[idx] for idx in possibly_batched_index]
+#            print(len(data))
+#            data = []
+            else:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    results = executor.map(self.getitem, possibly_batched_index)
+                    data = []
+                    for result in results:
+                        data.append(result)  
+#                print(data)
         else:
             data = self.dataset[possibly_batched_index]
         return self.collate_fn(data)
