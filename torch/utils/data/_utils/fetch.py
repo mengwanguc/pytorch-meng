@@ -102,7 +102,12 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         if self.auto_collation:
 
             end = time.time()
-            data = [self.dataset[idx] for idx in possibly_batched_index]
+            data = []
+#            data = [(self.dataset[idx]) for idx in possibly_batched_index]
+            for idx in range(len(possibly_batched_index)):
+                sample, target = self.dataset[idx]
+                sample = self.dataset.transform(sample)
+                data.append((sample, target))
             if self.dataset.transform is not None:
                 print("dataset.transform is NOT None")
             else:
