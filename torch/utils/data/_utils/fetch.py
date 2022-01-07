@@ -2,7 +2,8 @@ r""""Contains definitions of the methods used by the _BaseDataLoaderIter to fetc
 data from an iterable-style or map-style dataset. This logic is shared in both
 single- and multi-processing data loading.
 """
-
+import time
+import asyncio
 
 class _BaseDatasetFetcher(object):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
@@ -35,6 +36,8 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
             data = next(self.dataset_iter)
         return self.collate_fn(data)
 
+load_count = 0
+load_total = 0
 
 class _MapDatasetFetcher(_BaseDatasetFetcher):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
@@ -97,8 +100,32 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             
 
         if self.auto_collation:
+
+            end = time.time()
             data = [self.dataset[idx] for idx in possibly_batched_index]
+            if self.dataset.transform is not None:
+                print("dataset.transform is NOT None")
+            else:
+                print("dataset.transform is None")
+            data_time = time.time() - end
+            print("one batch load time: {}".format(data_time))
+            global load_total
+            global load_count
+            load_total += data_time
+            load_count += 1
+            print("average per batch load time: {}, load_total: {}, load_count: {}".format(
+                           load_total / load_count, load_total, load_count))
         else:
             data = self.dataset[possibly_batched_index]
 #        print("data size {}".format(len(data)))
         return self.collate_fn(data)
+
+
+def get_data(dataset, idx):
+    return dataset[idx]
+
+async def async_load_data(dataset, possibly_batched_index):
+    #data = [dataset[idx] async for idx in possibly_batched_index]
+    loop = asyncio.get_event_loop()
+    futures = [asyncio.ensure_future(loop.run_in_executor(None, get_data, dataset, idx)) for idx in possibly_batched_index]
+    await asyncio.gather(*futures)
