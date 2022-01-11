@@ -104,10 +104,11 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             end = time.time()
             data = []
 #            data = [(self.dataset[idx]) for idx in possibly_batched_index]
-            for idx in range(len(possibly_batched_index)):
-                sample, target = self.dataset[idx]
-                sample = self.dataset.transform(sample)
-                data.append((sample, target))
+#            for idx in possibly_batched_index:
+#                sample, target = self.dataset[idx]
+#                sample = self.dataset.transform(sample)
+#                data.append((sample, target))
+            data = asyncio.run(async_load_data(self.dataset, possibly_batched_index))
             if self.dataset.transform is not None:
                 print("dataset.transform is NOT None")
             else:
@@ -131,6 +132,5 @@ def get_data(dataset, idx):
 
 async def async_load_data(dataset, possibly_batched_index):
     #data = [dataset[idx] async for idx in possibly_batched_index]
-    loop = asyncio.get_event_loop()
-    futures = [asyncio.ensure_future(loop.run_in_executor(None, get_data, dataset, idx)) for idx in possibly_batched_index]
-    await asyncio.gather(*futures)
+    res = await asyncio.gather(*(dataset.async_get_item(idx) for idx in possibly_batched_index))
+    return res
