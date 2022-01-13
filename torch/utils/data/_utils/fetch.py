@@ -66,8 +66,8 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         if hasattr(self.dataset, 'is_tar') and self.dataset.is_tar == True:
 #            print("	using tar loader....!!!")
             if self.auto_collation:
-#                data = tar_load_data(self.dataset, possibly_batched_index)
-                data = asyncio.run(async_tar_load_data(self.dataset, possibly_batched_index))
+                data = tar_load_data(self.dataset, possibly_batched_index)
+#                data = asyncio.run(async_tar_load_data(self.dataset, possibly_batched_index))
             else:
                 data = self.dataset[possibly_batched_index]
  #           print("data size {}".format(len(data)))
