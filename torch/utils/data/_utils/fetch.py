@@ -46,6 +46,9 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def fetch(self, possibly_batched_index):
 #        print("_MapDatasetFetcher")
 #        print("self.dataset type:{}".format(type(self.dataset).__name__))
+        is_async = false
+        if hasattr(self.dataset, 'is_async') and self.dataset.is_async == True:
+            is_async = true
 
         if hasattr(self.dataset, 'is_zip') and self.dataset.is_zip == True:
 #            print("	using zip loader....!!!")
@@ -66,8 +69,10 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         if hasattr(self.dataset, 'is_tar') and self.dataset.is_tar == True:
 #            print("	using tar loader....!!!")
             if self.auto_collation:
-                data = tar_load_data(self.dataset, possibly_batched_index)
-#                data = asyncio.run(async_tar_load_data(self.dataset, possibly_batched_index))
+                if is_async:
+                    data = asyncio.run(async_tar_load_data(self.dataset, possibly_batched_index))
+                else:
+                    data = tar_load_data(self.dataset, possibly_batched_index)
             else:
                 data = self.dataset[possibly_batched_index]
  #           print("data size {}".format(len(data)))
