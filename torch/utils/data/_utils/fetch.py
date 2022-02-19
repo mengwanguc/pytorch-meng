@@ -46,9 +46,9 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def fetch(self, possibly_batched_index):
 #        print("_MapDatasetFetcher")
 #        print("self.dataset type:{}".format(type(self.dataset).__name__))
-        is_async = false
+        is_async = False
         if hasattr(self.dataset, 'is_async') and self.dataset.is_async == True:
-            is_async = true
+            is_async = True
 
         if hasattr(self.dataset, 'is_zip') and self.dataset.is_zip == True:
 #            print("	using zip loader....!!!")
