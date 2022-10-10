@@ -113,7 +113,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             else:
                 print("dataset.transform is None")
             data_time = time.time() - end
-            print("one batch load time: {}".format(data_time))
+            # print("one batch load time: {}".format(data_time))
             global load_total
             global load_count
             load_total += data_time
@@ -144,7 +144,7 @@ def tar_load_data(dataset, possibly_batched_index):
             per_image = per_image_data, class_index
             data.append(per_image)
     data_time = time.time() - end
-    print("one batch load time: {}".format(data_time))
+    # print("one batch load time: {}".format(data_time))
     return data
 
 
@@ -157,6 +157,6 @@ async def async_tar_load_data(dataset, possibly_batched_index):
             per_image = per_image_data, class_index
             res.append(per_image)
     data_time = time.time() - end
-    print("one batch load time: {}".format(data_time))
+    # print("one batch load time: {}".format(data_time))
     return res
 
