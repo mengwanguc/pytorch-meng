@@ -108,18 +108,18 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
 #                sample = self.dataset.transform(sample)
 #                data.append((sample, target))
 #            data = asyncio.run(async_load_data(self.dataset, possibly_batched_index))
-            if self.dataset.transform is not None:
-                print("dataset.transform is NOT None")
-            else:
-                print("dataset.transform is None")
+            # if self.dataset.transform is not None:
+            #     print("dataset.transform is NOT None")
+            # else:
+            #     print("dataset.transform is None")
             data_time = time.time() - end
             # print("one batch load time: {}".format(data_time))
             global load_total
             global load_count
             load_total += data_time
             load_count += 1
-            print("average per batch load time: {}, load_total: {}, load_count: {}".format(
-                           load_total / load_count, load_total, load_count))
+            # print("average per batch load time: {}, load_total: {}, load_count: {}".format(
+            #                load_total / load_count, load_total, load_count))
         else:
             data = self.dataset[possibly_batched_index]
 #        print("data size {}".format(len(data)))
