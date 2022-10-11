@@ -139,9 +139,9 @@ def tar_load_data(dataset, possibly_batched_index):
     end = time.time()
     data = []
     for idx in possibly_batched_index:
-        temp_data, class_index = dataset[idx]
-        for per_image_data in temp_data:
-            per_image = per_image_data, class_index
+        imgs, targets = dataset[idx]
+        for i in range(len(imgs)):
+            per_image = imgs[i], targets[i]
             data.append(per_image)
     data_time = time.time() - end
     # print("one batch load time: {}".format(data_time))
