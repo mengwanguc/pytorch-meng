@@ -91,16 +91,6 @@ class RandomSampler(Sampler[int]):
         self._num_samples = num_samples
         self.generator = generator
 
-        n = len(self.data_source)
-        if self.generator is None:
-            generator = torch.Generator()
-            generator.manual_seed(int(torch.empty((), dtype=torch.int64).random_().item()))
-        else:
-            generator = self.generator
-
-        self.default_order = torch.randperm(n, generator=self.generator).tolist()
-        #print(self.default_order)
-
         if not isinstance(self.replacement, bool):
             raise TypeError("replacement should be a boolean value, but got "
                             "replacement={}".format(self.replacement))
@@ -125,7 +115,11 @@ class RandomSampler(Sampler[int]):
         n = len(self.data_source)
         if self.generator is None:
             generator = torch.Generator()
-            generator.manual_seed(int(torch.empty((), dtype=torch.int64).random_().item()))
+            self.generator = generator
+#            generator.manual_seed(int(torch.empty((), dtype=torch.int64).random_().item()))
+            seed = 0
+            generator.manual_seed(seed)
+            print("meng: new generator manual seed {}".format(seed))
         else:
             generator = self.generator
         if self.replacement:
@@ -133,19 +127,8 @@ class RandomSampler(Sampler[int]):
                 yield from torch.randint(high=n, size=(32,), dtype=torch.int64, generator=generator).tolist()
             yield from torch.randint(high=n, size=(self.num_samples % 32,), dtype=torch.int64, generator=generator).tolist()
         else:
-            m = 1
-            k = int(n/m)
-            temp = torch.randperm(k, generator=self.generator).tolist()
-            res = []
-            for i in range(k):
-                for j in range(m):
-                    res.append(self.default_order[temp[i]*m+j])
-            for i in range(k*m, n):
-                res.append(self.default_order[i])
-            #print("m:{} n:{} len(res):{}".format(m, n, len(res)))
-#            print(res)
-#            print(len(res))
-            yield from res
+            yield from torch.randperm(n, generator=generator).tolist()
+
 
     def __len__(self):
         return self.num_samples
