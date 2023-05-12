@@ -139,6 +139,7 @@ PyObject *THPEngineClass = nullptr;
 // Implementation of torch._C._EngineBase.run_backward
 PyObject *THPEngine_run_backward(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+  // std::cout << "THPEngine_run_backward here!\n";
   HANDLE_TH_ERRORS
   PyObject *tensors = nullptr;
   PyObject *grad_tensors = nullptr;

@@ -9,6 +9,8 @@ half, float, double and bfloat16) and complex :class:`Tensor` types (cfloat, cdo
 import torch
 import warnings
 
+import time
+
 from torch.types import _TensorOrTensors
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
@@ -123,6 +125,7 @@ def backward(
             used to compute the attr::tensors. All the provided inputs must be leaf
             Tensors.
     """
+    start = time.time()
     if grad_variables is not None:
         warnings.warn("'grad_variables' is deprecated. Use 'grad_tensors' instead.")
         if grad_tensors is None:
@@ -141,11 +144,17 @@ def backward(
     grad_tensors_ = _make_grads(tensors, grad_tensors_)
     if retain_graph is None:
         retain_graph = create_graph
+    
+    backward_init_time = time.time() - start
+
+    start = time.time()
 
     Variable._execution_engine.run_backward(
         tensors, grad_tensors_, retain_graph, create_graph, inputs,
         allow_unreachable=True, accumulate_grad=True)  # allow_unreachable flag
 
+    run_backward_time = time.time() - start
+    # print("backward_init_time: {}\t run_backward_time: {}".format(backward_init_time, run_backward_time))
 
 def grad(
     outputs: _TensorOrTensors,
