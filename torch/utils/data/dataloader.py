@@ -20,6 +20,9 @@ from torch._six import queue, string_classes
 from . import IterableDataset, Sampler, SequentialSampler, RandomSampler, BatchSampler, Dataset
 from . import _utils
 
+import time
+import traceback
+
 T_co = TypeVar('T_co', covariant=True)
 T = TypeVar('T')
 _worker_init_fn_t = Callable[[int], None]
@@ -295,8 +298,10 @@ class DataLoader(Generic[T_co]):
 
     def _get_iterator(self) -> '_BaseDataLoaderIter':
         if self.num_workers == 0:
+            print("using _SingleProcessDataLoaderIter")
             return _SingleProcessDataLoaderIter(self)
         else:
+            print("using _SingleProcessDataLoaderIter")
             self.check_worker_number_rationality()
             return _MultiProcessingDataLoaderIter(self)
 
@@ -511,6 +516,8 @@ class _BaseDataLoaderIter(object):
         raise NotImplementedError
 
     def __next__(self) -> Any:
+        # start = time.time()
+        # print("start:\t{}".format(start))
         with torch.autograd.profiler.record_function(self._profile_name):
             if self._sampler_iter is None:
                 self._reset()
@@ -527,6 +534,12 @@ class _BaseDataLoaderIter(object):
                                  "IterableDataset replica at each worker. Please see "
                                  "https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset for examples.")
                 warnings.warn(warn_msg)
+            
+            # get_data_time = time.time() - start
+            (images, target) = data
+            print("loader_end:\t{}".format(time.time()))
+            # print("get_data_time: {}".format(get_data_time))
+            # print(data)
             return data
 
     next = __next__  # Python 2 compatibility
