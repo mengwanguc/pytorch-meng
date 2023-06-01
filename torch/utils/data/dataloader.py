@@ -301,7 +301,7 @@ class DataLoader(Generic[T_co]):
             print("using _SingleProcessDataLoaderIter")
             return _SingleProcessDataLoaderIter(self)
         else:
-            print("using _SingleProcessDataLoaderIter")
+            print("using _MultiProcessingDataLoaderIter")
             self.check_worker_number_rationality()
             return _MultiProcessingDataLoaderIter(self)
 
