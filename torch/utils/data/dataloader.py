@@ -536,7 +536,7 @@ class _BaseDataLoaderIter(object):
                 warnings.warn(warn_msg)
             
             # get_data_time = time.time() - start
-            (images, target) = data
+            # (images, target) = data
             print("loader_end:\t{}".format(time.time()))
             # print("get_data_time: {}".format(get_data_time))
             # print(data)
@@ -568,8 +568,14 @@ class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
     def _next_data(self):
         index = self._next_index()  # may raise StopIteration
         data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+        print("before pin memory. data address: images:\t{}\ttarget:{}".format(
+                hex(id(data[0])), hex(id(data[1]))))
         if self._pin_memory:
+            print("pinning memory")
             data = _utils.pin_memory.pin_memory(data)
+            print("done pinning memory")
+        else:
+            print("not pinning memory")
         return data
 
 

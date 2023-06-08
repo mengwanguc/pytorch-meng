@@ -40,6 +40,10 @@ def _wrap_type_error_to_not_implemented(f):
 # torch/__init__.py.in to add a type annotation for your method;
 # otherwise, it will not show up in autocomplete.
 class Tensor(torch._C._TensorBase):
+    def __del__(self):
+        if len(self.size()) > 0 and self.size(dim=0) == 256:
+            print("tensor {} with size {} is deleted!".format(hex(id(self)), self.size()))
+        
     def __deepcopy__(self, memo):
         if has_torch_function_unary(self):
             return handle_torch_function(Tensor.__deepcopy__, (self,), self, memo)

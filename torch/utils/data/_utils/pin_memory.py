@@ -44,12 +44,14 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
 
 def pin_memory(data):
     if isinstance(data, torch.Tensor):
+        print("pinning tensor")
         return data.pin_memory()
     elif isinstance(data, string_classes):
         return data
     elif isinstance(data, container_abcs.Mapping):
         return {k: pin_memory(sample) for k, sample in data.items()}
     elif isinstance(data, tuple) and hasattr(data, '_fields'):  # namedtuple
+        print("pinnning named tuple")
         return type(data)(*(pin_memory(sample) for sample in data))
     elif isinstance(data, container_abcs.Sequence):
         return [pin_memory(sample) for sample in data]
