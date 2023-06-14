@@ -20,6 +20,9 @@ from torch._six import queue, string_classes
 from . import IterableDataset, Sampler, SequentialSampler, RandomSampler, BatchSampler, Dataset
 from . import _utils
 
+import inspect
+import traceback
+
 T_co = TypeVar('T_co', covariant=True)
 T = TypeVar('T')
 _worker_init_fn_t = Callable[[int], None]
@@ -163,7 +166,9 @@ class DataLoader(Generic[T_co]):
                  timeout: float = 0, worker_init_fn: _worker_init_fn_t = None,
                  multiprocessing_context=None, generator=None,
                  *, prefetch_factor: int = 2,
-                 persistent_workers: bool = False):
+                 persistent_workers: bool = False,
+                 is_emulator: bool = False,
+                 estimated_pin_mem_time: float = 0.0):
         torch._C._log_api_usage_once("python.data_loader")  # type: ignore
 
         if num_workers < 0:
@@ -188,6 +193,9 @@ class DataLoader(Generic[T_co]):
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
         self.multiprocessing_context = multiprocessing_context
+        
+        self.is_emulator = is_emulator
+        self.estimated_pin_mem_time = estimated_pin_mem_time
 
         # Arg-check dataset related before checking samplers because we want to
         # tell users that iterable-style datasets are incompatible with custom
@@ -488,6 +496,7 @@ class _BaseDataLoaderIter(object):
         self._num_workers = loader.num_workers
         self._prefetch_factor = loader.prefetch_factor
         self._pin_memory = loader.pin_memory and torch.cuda.is_available()
+        self._emulate_pin_memory = loader.pin_memory and loader.is_emulator
         self._timeout = loader.timeout
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
@@ -514,7 +523,21 @@ class _BaseDataLoaderIter(object):
         with torch.autograd.profiler.record_function(self._profile_name):
             if self._sampler_iter is None:
                 self._reset()
+
+            # Who is calling me?
+            # print("-- call stack of __next__")
+            # for line in traceback.format_stack():
+            #     print(line.strip())
+            # print("---\n")
+
+            # Who I'm calling
+            # file_path = inspect.getsourcefile(self._next_data)
+            # source_lines, starting_line_number = inspect.findsource(self._next_data)
+            # print("self._next_data is implemented in file: {}  starting_line_number: {}".format(file_path, starting_line_number))
+
+            # print("  start to call self._next_data()")
             data = self._next_data()
+            # print("  finished calling _next_data()")
             self._num_yielded += 1
             if self._dataset_kind == _DatasetKind.Iterable and \
                     self._IterableDataset_len_called is not None and \
@@ -1150,6 +1173,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     return data
 
     def _next_data(self):
+        # print("      _next_data(self) is called")
         while True:
             # If the worker responsible for `self._rcvd_idx` has already ended
             # and was unable to fulfill this task (due to exhausting an `IterableDataset`),
