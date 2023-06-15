@@ -20,6 +20,8 @@ from torch._six import queue, string_classes
 from . import IterableDataset, Sampler, SequentialSampler, RandomSampler, BatchSampler, Dataset
 from . import _utils
 
+import time
+
 T_co = TypeVar('T_co', covariant=True)
 T = TypeVar('T')
 _worker_init_fn_t = Callable[[int], None]
@@ -163,7 +165,10 @@ class DataLoader(Generic[T_co]):
                  timeout: float = 0, worker_init_fn: _worker_init_fn_t = None,
                  multiprocessing_context=None, generator=None,
                  *, prefetch_factor: int = 2,
-                 persistent_workers: bool = False):
+                 persistent_workers: bool = False,
+                 is_emulator: bool = False,
+                 estimated_pin_mem_time: float = 0.0,
+                 emulator_version: int = 0):
         torch._C._log_api_usage_once("python.data_loader")  # type: ignore
 
         if num_workers < 0:
@@ -188,6 +193,10 @@ class DataLoader(Generic[T_co]):
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
         self.multiprocessing_context = multiprocessing_context
+
+        self.is_emulator = is_emulator
+        self.estimated_pin_mem_time = estimated_pin_mem_time
+        self.emulator_version = emulator_version
 
         # Arg-check dataset related before checking samplers because we want to
         # tell users that iterable-style datasets are incompatible with custom
@@ -488,6 +497,11 @@ class _BaseDataLoaderIter(object):
         self._num_workers = loader.num_workers
         self._prefetch_factor = loader.prefetch_factor
         self._pin_memory = loader.pin_memory and torch.cuda.is_available()
+
+        self._emulate_pin_memory = loader.pin_memory and loader.is_emulator and loader.emulator_version > 0
+        self._estimated_pin_mem_time = loader.estimated_pin_mem_time
+        self._emulator_version = loader.emulator_version
+
         self._timeout = loader.timeout
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
@@ -527,6 +541,7 @@ class _BaseDataLoaderIter(object):
                                  "IterableDataset replica at each worker. Please see "
                                  "https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset for examples.")
                 warnings.warn(warn_msg)
+            # print("__next__ end time: {}".format(time.time()))
             return data
 
     next = __next__  # Python 2 compatibility
@@ -557,6 +572,9 @@ class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
         data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
         if self._pin_memory:
             data = _utils.pin_memory.pin_memory(data)
+        elif self._emulate_pin_memory:
+            time.sleep(self._estimated_pin_mem_time)
+            data = [None for _ in data]
         return data
 
 
@@ -930,6 +948,22 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             # Similar to workers (see comment above), we only register
             # pin_memory_thread once it is started.
             self._pin_memory_thread = pin_memory_thread
+        elif self._emulate_pin_memory and self._emulator_version > 0:
+            self._pin_memory_thread_done_event = threading.Event()
+
+            # Queue is not type-annotated
+            self._data_queue = queue.Queue()  # type: ignore
+            emulate_pin_memory_thread = threading.Thread(
+                target=_utils.pin_memory._emulate_pin_memory_loop,
+                args=(self._worker_result_queue, self._data_queue,
+                      None,
+                      self._pin_memory_thread_done_event,
+                      self._estimated_pin_mem_time))
+            emulate_pin_memory_thread.daemon = True
+            emulate_pin_memory_thread.start()
+            # Similar to workers (see comment above), we only register
+            # pin_memory_thread once it is started.
+            self._pin_memory_thread = emulate_pin_memory_thread
         else:
             self._data_queue = self._worker_result_queue
 

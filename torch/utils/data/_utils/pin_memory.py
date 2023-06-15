@@ -10,6 +10,8 @@ from torch._six import queue, container_abcs, string_classes
 from . import MP_STATUS_CHECK_INTERVAL
 from torch._utils import ExceptionWrapper
 
+import time
+
 
 def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
     # This setting is thread local, and prevents the copy in pin_memory from
@@ -40,6 +42,39 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
             except queue.Full:
                 continue
         del r  # save memory
+
+
+def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time):
+    # This setting is thread local, and prevents the copy in pin_memory from
+    # consuming all CPU cores.
+    torch.set_num_threads(1)
+
+    while not done_event.is_set():
+        try:
+            r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+        except queue.Empty:
+            continue
+        idx, data = r
+        if not done_event.is_set() and not isinstance(data, ExceptionWrapper):
+            try:
+                elapsed_time = 0
+                pin_start = time.time()
+                while elapsed_time < estimated_pin_mem_time:
+                    elapsed_time = time.time() - pin_start
+                data = [None for _ in data]
+            except Exception:
+                data = ExceptionWrapper(
+                    where="in emulation pin memory thread")
+            r = (idx, data)
+        while not done_event.is_set():
+            try:
+                out_queue.put(r, timeout=MP_STATUS_CHECK_INTERVAL)
+                break
+            except queue.Full:
+                continue
+        del r  # save memory
+
+
 
 
 def pin_memory(data):
