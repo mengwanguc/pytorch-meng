@@ -67,8 +67,6 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                 for i, elem in enumerate(data):
                     print("sys.getsizeof(data[{}]) = {}".format(i, sys.getsizeof(elem)))
 
-                data = mlock.PyBalloon(data)
-
                 size = None
                 length = None
                 try:
@@ -82,9 +80,10 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                 print("Got size = {}, length = {}".format(size, length))
                 print("Data: {}".format(data))
 
+                data = [mlock.PyBalloon(elem.nelement() * elem.element_size()) for elem in data]
+
                 while elapsed_time < estimated_pin_mem_time:
                     elapsed_time = time.time() - pin_start
-                data = [None for _ in data]
             except Exception:
                 data = ExceptionWrapper(
                     where="in emulation pin memory thread")
