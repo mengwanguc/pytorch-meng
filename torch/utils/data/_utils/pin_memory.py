@@ -11,7 +11,6 @@ from . import MP_STATUS_CHECK_INTERVAL
 from torch._utils import ExceptionWrapper
 
 import time
-import mlock
 
 
 def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
@@ -61,7 +60,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                 elapsed_time = 0
                 pin_start = time.time()
 
-                foo = mlock.pin_memory()
+                foo = pin_memory(data)
 
                 size = None
                 length = None
