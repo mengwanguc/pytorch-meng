@@ -62,6 +62,9 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                 pin_start = time.time()
 
                 print("sys.getsizeof(data) = {}".format(sys.getsizeof(data)))
+                print("iter:")
+                for i, elem in enumerate(data):
+                    print("sys.getsizeof(data[{}]) = {}".format(i, sys.getsizeof(elem)))
 
                 size = None
                 length = None
