@@ -11,6 +11,7 @@ from . import MP_STATUS_CHECK_INTERVAL
 from torch._utils import ExceptionWrapper
 
 import time
+import mlock
 
 
 def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
@@ -57,7 +58,27 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
         idx, data = r
         if not done_event.is_set() and not isinstance(data, ExceptionWrapper):
             try:
-                data = pin_memory(data)
+                elapsed_time = 0
+                pin_start = time.time()
+
+                foo = mlock.pin_memory()
+
+                size = None
+                length = None
+                try:
+                    size = data.size
+                except:
+                    print("No size attr")
+                try:
+                    length = len(data)
+                except:
+                    print("No len method impl.")
+                print("Got size = {}, length = {}".format(size, length))
+                print("Data: {}".format(data))
+
+                while elapsed_time < estimated_pin_mem_time:
+                    elapsed_time = time.time() - pin_start
+                data = [None for _ in data]
             except Exception:
                 data = ExceptionWrapper(
                     where="in emulation pin memory thread")
