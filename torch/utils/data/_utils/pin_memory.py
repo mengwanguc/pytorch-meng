@@ -12,6 +12,7 @@ from torch._utils import ExceptionWrapper
 
 import time
 import sys
+import mlock
 
 
 def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
@@ -65,6 +66,8 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                 print("iter:")
                 for i, elem in enumerate(data):
                     print("sys.getsizeof(data[{}]) = {}".format(i, sys.getsizeof(elem)))
+
+                data = mlock.PyBalloon(data)
 
                 size = None
                 length = None
