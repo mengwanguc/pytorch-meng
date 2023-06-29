@@ -70,6 +70,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                     length = len(data)
                 except:
                     print("No len method impl.")
+                print("Got size = {}, length = {}", size, length)
 
                 while elapsed_time < estimated_pin_mem_time:
                     elapsed_time = time.time() - pin_start
