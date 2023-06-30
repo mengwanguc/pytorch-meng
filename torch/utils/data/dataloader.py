@@ -168,7 +168,8 @@ class DataLoader(Generic[T_co]):
                  persistent_workers: bool = False,
                  is_emulator: bool = False,
                  estimated_pin_mem_time: float = 0.0,
-                 emulator_version: int = 0):
+                 emulator_version: int = 0,
+                 balloons: dict = dict()):
         torch._C._log_api_usage_once("python.data_loader")  # type: ignore
 
         if num_workers < 0:
@@ -307,7 +308,7 @@ class DataLoader(Generic[T_co]):
             return _SingleProcessDataLoaderIter(self)
         else:
             self.check_worker_number_rationality()
-            return _MultiProcessingDataLoaderIter(self)
+            return _MultiProcessingDataLoaderIter(self, self.balloons)
 
     @property
     def multiprocessing_context(self):
@@ -888,7 +889,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
     #     processing indices already in `index_queue` if we are already shutting
     #     down.
 
-    def __init__(self, loader):
+    def __init__(self, loader, balloons):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
 
         assert self._num_workers > 0
@@ -907,6 +908,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._shutdown = False
         self._workers_done_event = multiprocessing_context.Event()
 
+
+        self._balloons = balloons # For mlock.PyBalloon reuse in emulator.
         self._index_queues = []
         self._workers = []
         for i in range(self._num_workers):
@@ -958,7 +961,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 args=(self._worker_result_queue, self._data_queue,
                       None,
                       self._pin_memory_thread_done_event,
-                      self._estimated_pin_mem_time))
+                      self._estimated_pin_mem_time,
+                      self._balloons))
             emulate_pin_memory_thread.daemon = True
             emulate_pin_memory_thread.start()
             # Similar to workers (see comment above), we only register

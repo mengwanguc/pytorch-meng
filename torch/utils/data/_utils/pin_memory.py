@@ -45,8 +45,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
                 continue
         del r  # save memory
 
-
-def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time):
+def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time, balloons):
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
     torch.set_num_threads(1)
@@ -61,7 +60,39 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
             try:
                 elapsed_time = 0
                 pin_start = time.time()
-                data = [mlock.PyBalloon(elem.nelement() * elem.element_size()) for elem in data]
+
+                # balloons is a dict, with PyBalloons organized by size.
+                for elem in data:
+                    size = elem.nelement() * elem.element_size()
+                    balloon = None
+
+                    has_balloon = False
+                    if size in balloons:
+
+                        # Look through the existing balloons and try to claim
+                        # one of the same size.
+                        for balloon in balloons[size]:
+                            if not balloon.get_used():
+                                balloon.set_used(True)
+                                has_balloon = True
+                                break
+                        
+                        # If we didn't find a free balloon in the list, create a
+                        # new one and add it to the list.
+                        if not has_balloon:
+                            balloon = mlock.PyBalloon(size)
+                            balloon.set_used(True)
+                            balloons[size].append(balloon)
+
+                    else:
+                        # If there's no key yet, create a balloon and make it
+                        # the first element in the list for that size.
+
+                        balloon = mlock.PyBalloon(size)
+                        balloon.set_used(True)
+                        balloons[size] = [balloon]
+
+                data = [None for _ in data]
                 alloc_end = time.time()
                 print("time to alloc: {} ms".format((alloc_end - pin_start) * 1000))
                 while elapsed_time < estimated_pin_mem_time:
