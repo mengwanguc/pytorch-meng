@@ -74,6 +74,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                         for balloon in balloons[size]:
                             if not balloon.get_used():
                                 balloon.set_used(True)
+                                print("reusing balloon of size {}".format(balloon.get_size()))
                                 has_balloon = True
                                 break
                         
