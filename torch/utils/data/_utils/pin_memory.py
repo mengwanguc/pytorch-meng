@@ -61,6 +61,10 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                 elapsed_time = 0
                 pin_start = time.time()
 
+                # Note: in the future we may want to actually copy the memory in
+                # addition to just allocating it and simulating the copy time.
+                # However, the current method seems fine for the moment.
+
                 # balloons is a dict, with PyBalloons organized by size.
                 for elem in data:
                     size = elem.nelement() * elem.element_size()
@@ -94,7 +98,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
 
                 data = [None for _ in data]
                 alloc_end = time.time()
-                print("time to alloc: {} ms".format((alloc_end - pin_start) * 1000))
+                # print("time to alloc: {} ms".format((alloc_end - pin_start) * 1000))
                 while elapsed_time < estimated_pin_mem_time:
                     elapsed_time = time.time() - pin_start
             except Exception:
