@@ -46,9 +46,9 @@ class _DatasetKind(object):
     Iterable = 1
 
     @staticmethod
-    def create_fetcher(kind, dataset, auto_collation, collate_fn, drop_last):
+    def create_fetcher(kind, dataset, auto_collation, collate_fn, drop_last, n_loader_threads):
         if kind == _DatasetKind.Map:
-            return _utils.fetch._MapDatasetFetcher(dataset, auto_collation, collate_fn, drop_last)
+            return _utils.fetch._MapDatasetFetcher(dataset, auto_collation, collate_fn, drop_last, n_loader_threads)
         else:
             return _utils.fetch._IterableDatasetFetcher(dataset, auto_collation, collate_fn, drop_last)
 

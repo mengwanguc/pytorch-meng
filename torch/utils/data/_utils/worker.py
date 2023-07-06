@@ -7,7 +7,6 @@ static methods.
 import torch
 import random
 import os
-import threading
 from dataclasses import dataclass
 from torch._six import queue
 from torch._utils import ExceptionWrapper
@@ -120,9 +119,9 @@ r"""Dummy class used to resume the fetching when worker reuse is enabled"""
 class _ResumeIteration(object):
     pass
 
-def _loader_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
+def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers, loader_id):
+                 num_workers, persistent_workers, n_loader_threads):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -200,7 +199,7 @@ def _loader_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 init_exception = None
             else:
                 try:
-                    data = fetcher.fetch(index)
+                    data = fetcher.fetch(index, n_loader_threads)
                 except Exception as e:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         data = _IterableDatasetStopIteration(worker_id)
@@ -222,31 +221,3 @@ def _loader_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
     if done_event.is_set():
         data_queue.cancel_join_thread()
         data_queue.close()
-
-def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
-                 auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers, n_loader_threads):
-    
-    print("creating threads")
-
-    threads = [threading.Thread(target=_loader_loop,
-                                group = None,
-                                name = "Worker #{} Loader #{}".format(worker_id, loader_id),
-                                args = (
-                                    dataset_kind, dataset, index_queue,
-                                    data_queue, done_event, auto_collation,
-                                    collate_fn, drop_last, seed, init_fn,
-                                    worker_id, num_workers, persistent_workers,
-                                    loader_id)) for loader_id in range(n_loader_threads)]
-
-    print("threads created; starting threads")
-
-    for thread in threads:
-        thread.start()
-    
-    print("threads started; waiting on threads")
-
-    for thread in threads:
-        thread.join()
-
-    print("threads done")
