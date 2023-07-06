@@ -181,7 +181,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 iteration_end = False
                 # Recreate the fetcher for worker-reuse policy
                 fetcher = _DatasetKind.create_fetcher(
-                    dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                    dataset_kind, dataset, auto_collation, collate_fn, drop_last, n_loader_threads)
                 continue
             elif r is None:
                 # Received the final signal
