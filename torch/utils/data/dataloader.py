@@ -890,7 +890,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
     #     processing indices already in `index_queue` if we are already shutting
     #     down.
 
-    def __init__(self, loader, balloons):
+    def __init__(self, loader, balloons, n_loader_threads):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
 
         assert self._num_workers > 0
@@ -911,6 +911,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
 
         self._balloons = balloons # For mlock.PyBalloon reuse in emulator.
+        self._n_loader_threads = n_loader_threads # Number of concurrent images to be loader per worker process
         self._index_queues = []
         self._workers = []
         for i in range(self._num_workers):
@@ -925,7 +926,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._worker_result_queue, self._workers_done_event,
                       self._auto_collation, self._collate_fn, self._drop_last,
                       self._base_seed + i, self._worker_init_fn, i, self._num_workers,
-                      self._persistent_workers))
+                      self._persistent_workers, self._n_loader_threads))
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.
