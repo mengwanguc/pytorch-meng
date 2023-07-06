@@ -41,6 +41,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
         self.semaphore = asyncio.Semaphore(dataset._n_loader_threads)
+        print("semaphore with value {}".format(self.semaphore._value))
 
     async def load_single_data(self, index):
         async with self.semaphore:
