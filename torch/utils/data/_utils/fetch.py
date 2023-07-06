@@ -50,15 +50,6 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             data = asyncio.run(self.load_many_data(possibly_batched_index))
-            print("ZZZ: {}".format(type(self.dataset[0][0])))
-            print("AAA: {}".format(type(self.dataset[0])))
-            print("BBB: {}".format(self.dataset[0]))
-            print("something: {}".format(type(data[0][0])))
-            print("type: {}".format(type(data[0])))
-            print("data[0]: {}".format(data[0]))
-            foo = [self.dataset[idx] for idx in possibly_batched_index]
-            print("\n\n\ndata = {}\n\n\nfoo = {}\n\n\n".format(data, foo))
-            return foo
         else:
             data = self.dataset[possibly_batched_index]
         return self.collate_fn(data)
