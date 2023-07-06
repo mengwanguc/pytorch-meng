@@ -178,11 +178,15 @@ def _loader_loop(index_queue, data_queue, dataset_kind, dataset, auto_collation,
                 continue
             print("J")
             idx, index = r
+            print("N")
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
+            print("Q")
             if init_exception is not None:
                 data = init_exception
                 init_exception = None
+                print("O")
             else:
+                print("P")
                 try:
                     print("K")
                     data = fetcher.fetch(index)
