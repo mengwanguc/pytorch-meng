@@ -45,11 +45,13 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         return self.dataset[index]
 
     async def load_many_data(self, indices):
-        return await asyncio.gather(*(self.load_single_data(idx) for idx in indices))
+        return await asyncio.gather(*((self.load_single_data(idx)) for idx in indices))
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             data = asyncio.run(self.load_many_data(possibly_batched_index))
+            print("AAA: {}".format(type(self.dataset[0])))
+            print("BBB: {}".format(self.dataset[0]))
             print("type: {}".format(type(data)))
             print("data[0]: {}".format(data[0]))
             return data
