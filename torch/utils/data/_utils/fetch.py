@@ -43,8 +43,8 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         self.semaphore = asyncio.Semaphore(dataset._n_loader_threads)
         print("semaphore with value {}".format(self.semaphore._value))
 
-    async def load_single_data(self, index):
-        async with self.semaphore:
+    def load_single_data(self, index):
+        with self.semaphore:
             print("begin... {}".format(index))
             data = self.dataset[index]
             time.sleep(0.5)
