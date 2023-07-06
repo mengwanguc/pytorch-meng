@@ -21,7 +21,9 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
         self.dataset_iter = iter(dataset)
 
     def fetch(self, possibly_batched_index):
+        print("iterative")
         if self.auto_collation:
+            print("")
             data = []
             for _ in possibly_batched_index:
                 try:
@@ -40,6 +42,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
 
     def fetch(self, possibly_batched_index):
+        print("map")
         if self.auto_collation:
             data = [self.dataset[idx] for idx in possibly_batched_index]
         else:
