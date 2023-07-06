@@ -40,8 +40,8 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
 class _MapDatasetFetcher(_BaseDatasetFetcher):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
-        self.semaphore = asyncio.Semaphore(dataset._n_loader_threads)
-        print("semaphore with value {}".format(self.semaphore._value))
+        self.max_threads = dataset._n_loader_threads
+        print("max threads {}".format(self.max_threads))
 
     def load_single_data_blocking(self, index):
         print("begin {}".format(index))
@@ -50,12 +50,13 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         print("end   {}".format(index))
         return data
 
-    async def load_single_data(self, index):
-        async with self.semaphore:
+    async def load_single_data(self, index, semaphore):
+        async with semaphore:
             return await asyncio.to_thread(self.load_single_data_blocking, index)
 
     async def load_many_data(self, indices):
-        return await asyncio.gather(*(self.load_single_data(index) for index in indices))
+        semaphore = asyncio.Semaphore(self.max_threads)
+        return await asyncio.gather(*(self.load_single_data(index, semaphore) for index in indices))
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
