@@ -41,8 +41,11 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
 
-    async def load_data(self, indices):
-        return await asyncio.gather([self.dataset[idx] for idx in indices])
+    async def load_single_data(self, index):
+        return self.dataset[index]
+
+    async def load_many_data(self, indices):
+        return await asyncio.gather([self.load_single_data(idx) for idx in indices])
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
