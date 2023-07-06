@@ -140,15 +140,24 @@ def _loader_loop(index_queue, data_queue, dataset_kind, dataset, auto_collation,
     # `None`.
     iteration_end = False
 
+    print("A")
+
     watchdog = ManagerWatchdog()
 
+    print("B")
+
     try:
+        print("C")
         while watchdog.is_alive():
+            print("D")
             try:
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+                print("E")
             except queue.Empty:
+                print("F")
                 continue
             if isinstance(r, _ResumeIteration):
+                print("G")
                 # Acknowledge the main process
                 data_queue.put((r, None))
                 iteration_end = False
@@ -157,14 +166,17 @@ def _loader_loop(index_queue, data_queue, dataset_kind, dataset, auto_collation,
                     dataset_kind, dataset, auto_collation, collate_fn, drop_last)
                 continue
             elif r is None:
+                print("H")
                 # Received the final signal
                 assert done_event.is_set() or iteration_end
                 break
             elif done_event.is_set() or iteration_end:
+                print("I")
                 # `done_event` is set. But I haven't received the final signal
                 # (None) yet. I will keep continuing until get it, and skip the
                 # processing steps.
                 continue
+            print("J")
             idx, index = r
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
             if init_exception is not None:
@@ -172,7 +184,9 @@ def _loader_loop(index_queue, data_queue, dataset_kind, dataset, auto_collation,
                 init_exception = None
             else:
                 try:
+                    print("K")
                     data = fetcher.fetch(index)
+                    print("L")
                 except Exception as e:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         data = _IterableDatasetStopIteration(worker_id)
@@ -186,6 +200,7 @@ def _loader_loop(index_queue, data_queue, dataset_kind, dataset, auto_collation,
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
                         data = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
+            print("M")
             data_queue.put((idx, data))
             del data, idx, index, r  # save memory
     except KeyboardInterrupt:
