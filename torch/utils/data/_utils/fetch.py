@@ -44,12 +44,11 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         print("semaphore with value {}".format(self.semaphore._value))
 
     def load_single_data(self, index):
-        with self.semaphore:
-            print("begin... {}".format(index))
-            data = self.dataset[index]
-            time.sleep(0.5)
-            print("end... {}".format(index))
-            return data
+        print("begin... {}".format(index))
+        data = self.dataset[index]
+        time.sleep(0.5)
+        print("end... {}".format(index))
+        return data
 
     async def load_many_data(self, indices):
         return await asyncio.gather(*(asyncio.to_thread(self.load_single_data, idx) for idx in indices))
