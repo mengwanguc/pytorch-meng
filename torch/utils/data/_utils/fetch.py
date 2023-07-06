@@ -18,11 +18,9 @@ class _BaseDatasetFetcher(object):
 
 
 class _IterableDatasetFetcher(_BaseDatasetFetcher):
-    def __init__(self, dataset, auto_collation, collate_fn, drop_last, n_loader_threads):
-        super(_IterableDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last, n_loader_threads)
+    def __init__(self, dataset, auto_collation, collate_fn, drop_last):
+        super(_IterableDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
         self.dataset_iter = iter(dataset)
-        self.max_threads = n_loader_threads
-        print("max threads: {}".format(self.max_threads))
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
@@ -40,8 +38,10 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
 
 
 class _MapDatasetFetcher(_BaseDatasetFetcher):
-    def __init__(self, dataset, auto_collation, collate_fn, drop_last):
-        super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
+    def __init__(self, dataset, auto_collation, collate_fn, drop_last, n_loader_threads):
+        super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last, n_loader_threads)
+        self.max_threads = n_loader_threads
+        print("max threads: {}".format(self.max_threads))
 
     async def load_single_data(self, index):
         return self.dataset[index]
