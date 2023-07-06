@@ -194,13 +194,16 @@ def _loader_loop(index_queue, data_queue, dataset_kind, dataset, auto_collation,
                     data = fetcher.fetch(index)
                     print("L")
                 except Exception as e:
+                    print("U")
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
+                        print("V")
                         data = _IterableDatasetStopIteration(worker_id)
                         # Set `iteration_end`
                         #   (1) to save future `next(...)` calls, and
                         #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
                         iteration_end = True
                     else:
+                        print("W")
                         # It is important that we don't store exc_info in a variable.
                         # `ExceptionWrapper` does the correct thing.
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
