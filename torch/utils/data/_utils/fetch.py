@@ -43,15 +43,19 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         self.semaphore = asyncio.Semaphore(dataset._n_loader_threads)
         print("semaphore with value {}".format(self.semaphore._value))
 
-    def load_single_data(self, index):
-        print("begin... {}".format(index))
+    def load_single_data_blocking(self, index):
+        print("begin {}".format(index))
         data = self.dataset[index]
         time.sleep(0.5)
-        print("end... {}".format(index))
+        print("end   {}".format(index))
         return data
 
+    async def load_single_data(self, index):
+        async with self.semaphore:
+            return await asyncio.to_thread(self.load_single_data_blocking, index)
+
     async def load_many_data(self, indices):
-        return await asyncio.gather(*(asyncio.to_thread(self.load_single_data, idx) for idx in indices))
+        return await asyncio.gather(*(self.load_single_data(index) for index in indices))
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
