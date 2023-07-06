@@ -230,54 +230,26 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
         print("creating threads for wid {}".format(worker_id))
 
-        iteration_end = False
-        watchdog = ManagerWatchdog()
+
+
+        _loader_loop(index_queue, data_queue, dataset_kind, dataset,
+                     auto_collation, collate_fn, drop_last, done_event,
+                     worker_id)
+
+        # print("threads created for wid {}".format(worker_id))
+
+        # # start all threads
+        # for thread in threads:
+        #     thread.start()
+
+        # print("threads started for wid {}".format(worker_id))
+
+        # # wait on all threads
+        # for thread in threads:
+        #     thread.join()
         
-        while watchdog.is_alive():
-            try:
-                r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
-            except queue.Empty:
-                continue
-            if isinstance(r, _ResumeIteration):
-                # Acknowledge the main process
-                data_queue.put((r, None))
-                iteration_end = False
-                # Recreate the fetcher for worker-reuse policy
-                fetcher = _DatasetKind.create_fetcher(
-                    dataset_kind, dataset, auto_collation, collate_fn, drop_last)
-                continue
-            elif r is None:
-                # Received the final signal
-                assert done_event.is_set() or iteration_end
-                break
-            elif done_event.is_set() or iteration_end:
-                # `done_event` is set. But I haven't received the final signal
-                # (None) yet. I will keep continuing until get it, and skip the
-                # processing steps.
-                continue
-            idx, index = r
-            data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
-            if init_exception is not None:
-                data = init_exception
-                init_exception = None
-            else:
-                try:
-                    data = fetcher.fetch(index)
-                except Exception as e:
-                    if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
-                        data = _IterableDatasetStopIteration(worker_id)
-                        # Set `iteration_end`
-                        #   (1) to save future `next(...)` calls, and
-                        #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
-                        iteration_end = True
-                    else:
-                        # It is important that we don't store exc_info in a variable.
-                        # `ExceptionWrapper` does the correct thing.
-                        # See NOTE [ Python Traceback Reference Cycle Problem ]
-                        data = ExceptionWrapper(
-                            where="in DataLoader worker process {}".format(worker_id))
-            data_queue.put((idx, data))
-            del data, idx, index, r  # save memory
+        # print("threads done for wid {}".format(worker_id))
+
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
