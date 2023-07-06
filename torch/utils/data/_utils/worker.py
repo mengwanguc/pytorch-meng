@@ -121,8 +121,26 @@ class _ResumeIteration(object):
     pass
 
 # Main loop for loader threads.
-def _loader_loop(watchdog, index_queue, data_queue, dataset_kind, dataset, auto_collation, collate_fn, drop_last, done_event, worker_id):
+def _loader_loop(index_queue, data_queue, dataset_kind, dataset, auto_collation, collate_fn, drop_last, done_event, worker_id):
+    print("WID {} thread {} saying hi".format(worker_id, threading.get_ident()))
+
     from torch.utils.data import _DatasetKind
+
+    # When using Iterable mode, some worker can exit earlier than others due
+    # to the IterableDataset behaving differently for different workers.
+    # When such things happen, an `_IterableDatasetStopIteration` object is
+    # sent over to the main process with the ID of this worker, so that the
+    # main process won't send more tasks to this worker, and will send
+    # `None` to this worker to properly exit it.
+    #
+    # Note that we cannot set `done_event` from a worker as it is shared
+    # among all processes. Instead, we set the `iteration_end` flag to
+    # signify that the iterator is exhausted. When either `done_event` or
+    # `iteration_end` is set, we skip all processing step and just wait for
+    # `None`.
+    iteration_end = False
+
+    watchdog = ManagerWatchdog()
 
     try:
         while watchdog.is_alive():
@@ -202,6 +220,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
         try:
             if init_fn is not None:
+                print("init function")
                 init_fn(worker_id)
 
             fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
@@ -209,36 +228,28 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             init_exception = ExceptionWrapper(
                 where="in DataLoader worker process {}".format(worker_id))
 
-        # When using Iterable mode, some worker can exit earlier than others due
-        # to the IterableDataset behaving differently for different workers.
-        # When such things happen, an `_IterableDatasetStopIteration` object is
-        # sent over to the main process with the ID of this worker, so that the
-        # main process won't send more tasks to this worker, and will send
-        # `None` to this worker to properly exit it.
-        #
-        # Note that we cannot set `done_event` from a worker as it is shared
-        # among all processes. Instead, we set the `iteration_end` flag to
-        # signify that the iterator is exhausted. When either `done_event` or
-        # `iteration_end` is set, we skip all processing step and just wait for
-        # `None`.
-        iteration_end = False
+        print("creating threads for wid {}".format(worker_id))
 
-        watchdog = ManagerWatchdog()
         threads = [threading.Thread(_loader_loop,
                                     args = (
-                                        watchdog, index_queue, data_queue,
-                                        dataset_kind, dataset, auto_collation,
-                                        collate_fn, drop_last, done_event,
-                                        worker_id
+                                        index_queue, data_queue, dataset_kind,
+                                        dataset, auto_collation, collate_fn,
+                                        drop_last, done_event, worker_id
                                     )) for _ in range(n_loader_threads)]
+
+        print("threads created for wid {}".format(worker_id))
 
         # start all threads
         for thread in threads:
             thread.start()
 
+        print("threads started for wid {}".format(worker_id))
+
         # wait on all threads
         for thread in threads:
             thread.join()
+        
+        print("threads done for wid {}".format(worker_id))
 
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
