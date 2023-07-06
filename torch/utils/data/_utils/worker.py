@@ -7,6 +7,7 @@ static methods.
 import torch
 import random
 import os
+import threading
 from dataclasses import dataclass
 from torch._six import queue
 from torch._utils import ExceptionWrapper
@@ -121,7 +122,7 @@ class _ResumeIteration(object):
 
 def _loader_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers):
+                 num_workers, persistent_workers, loader_id):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -226,8 +227,23 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
                  num_workers, persistent_workers, n_loader_threads):
     
-    print("loader threads: %d", n_loader_threads)
+    print("creating threads")
 
-    _loader_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
-                 auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers)
+    threads = [threading.Thread(_loader_loop, args = (
+                                    dataset_kind, dataset, index_queue,
+                                    data_queue, done_event, auto_collation,
+                                    collate_fn, drop_last, seed, init_fn,
+                                    worker_id, num_workers, persistent_workers,
+                                    loader_id)) for loader_id in range(n_loader_threads)]
+
+    print("threads created; starting threads")
+
+    for thread in threads:
+        thread.start()
+    
+    print("threads started; waiting on threads")
+
+    for thread in threads:
+        thread.join()
+
+    print("threads done")
