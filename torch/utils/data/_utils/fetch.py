@@ -4,7 +4,7 @@ single- and multi-processing data loading.
 """
 
 import asyncio
-
+import time
 
 class _BaseDatasetFetcher(object):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
@@ -46,6 +46,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         async with self.semaphore:
             print("begin... {}".format(index))
             data = self.dataset[index]
+            time.sleep(0.5)
             print("end... {}".format(index))
             return data
 
