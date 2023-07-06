@@ -50,6 +50,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             data = asyncio.run(self.load_many_data(possibly_batched_index))
+            print("type: {}".format(type(data)))
             print("data[0]: {}".format(data[0]))
             return data
         else:
