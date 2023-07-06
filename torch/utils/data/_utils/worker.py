@@ -182,9 +182,11 @@ def _loader_loop(index_queue, data_queue, dataset_kind, dataset, auto_collation,
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
             print("Q")
             if init_exception is not None:
+                print("R")
                 data = init_exception
+                print("S")
                 init_exception = None
-                print("O")
+                print("T")
             else:
                 print("P")
                 try:
