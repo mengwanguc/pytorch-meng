@@ -232,6 +232,14 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                                         worker_id
                                     )) for _ in range(n_loader_threads)]
 
+        # start all threads
+        for thread in threads:
+            thread.start()
+
+        # wait on all threads
+        for thread in threads:
+            thread.join()
+
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
