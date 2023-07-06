@@ -224,8 +224,10 @@ def _loader_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers):
+                 num_workers, persistent_workers, n_loader_threads):
     
+    print("loader threads: %d", n_loader_threads)
+
     _loader_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
                  num_workers, persistent_workers)
