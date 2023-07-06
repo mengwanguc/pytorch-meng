@@ -229,7 +229,10 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
     
     print("creating threads")
 
-    threads = [threading.Thread(_loader_loop, args = (
+    threads = [threading.Thread(target=_loader_loop,
+                                group = None,
+                                name = "Worker #{} Loader #{}".format(worker_id, loader_id),
+                                args = (
                                     dataset_kind, dataset, index_queue,
                                     data_queue, done_event, auto_collation,
                                     collate_fn, drop_last, seed, init_fn,
