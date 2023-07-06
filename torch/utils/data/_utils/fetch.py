@@ -52,7 +52,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             data = asyncio.run(self.load_many_data(possibly_batched_index))
             print("AAA: {}".format(type(self.dataset[0])))
             print("BBB: {}".format(self.dataset[0]))
-            print("type: {}".format(type(data)))
+            print("type: {}".format(type(data[0])))
             print("data[0]: {}".format(data[0]))
             return data
         else:
