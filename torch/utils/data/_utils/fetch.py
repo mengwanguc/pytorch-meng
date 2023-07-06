@@ -59,7 +59,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             foo = [self.dataset[idx] for idx in possibly_batched_index]
             print("equal? {}".format(foo == data))
             print("\n\n\ndata = {}\n\n\nfoo = {}\n\n\n".format(data, foo))
-            return data
+            return foo
         else:
             data = self.dataset[possibly_batched_index]
         return self.collate_fn(data)
