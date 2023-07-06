@@ -174,6 +174,7 @@ def _loader_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         while watchdog.is_alive():
             try:
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+                print("r: {}".format(r))
             except queue.Empty:
                 continue
             if isinstance(r, _ResumeIteration):
@@ -194,6 +195,7 @@ def _loader_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 # processing steps.
                 continue
             idx, index = r
+            print("idx: {}, index: {}".format(idx, index))
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
             if init_exception is not None:
                 data = init_exception
