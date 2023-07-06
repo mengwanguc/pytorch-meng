@@ -169,7 +169,8 @@ class DataLoader(Generic[T_co]):
                  is_emulator: bool = False,
                  estimated_pin_mem_time: float = 0.0,
                  emulator_version: int = 0,
-                 balloons: dict = dict()):
+                 balloons: dict = dict(),
+                 n_loader_threads: int = 1):
         torch._C._log_api_usage_once("python.data_loader")  # type: ignore
 
         if num_workers < 0:
@@ -199,6 +200,7 @@ class DataLoader(Generic[T_co]):
         self.estimated_pin_mem_time = estimated_pin_mem_time
         self.emulator_version = emulator_version
         self.balloons = balloons
+        self.n_loader_threads = n_loader_threads
 
         # Arg-check dataset related before checking samplers because we want to
         # tell users that iterable-style datasets are incompatible with custom
@@ -309,7 +311,7 @@ class DataLoader(Generic[T_co]):
             return _SingleProcessDataLoaderIter(self)
         else:
             self.check_worker_number_rationality()
-            return _MultiProcessingDataLoaderIter(self, self.balloons)
+            return _MultiProcessingDataLoaderIter(self, self.balloons, self.n_loader_threads)
 
     @property
     def multiprocessing_context(self):
