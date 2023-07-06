@@ -3,6 +3,8 @@ data from an iterable-style or map-style dataset. This logic is shared in both
 single- and multi-processing data loading.
 """
 
+import asyncio
+
 
 class _BaseDatasetFetcher(object):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
@@ -39,10 +41,14 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
 
+    async def load_data(self, indices):
+        return await asyncio.gather([self.dataset[idx] for idx in indices])
+
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
-            data = [self.dataset[idx] for idx in possibly_batched_index]
-            print(data[0])
+            data = asyncio.run(self.load_data(possibly_batched_index))
+            print("data[0]: {}".format(data[0]))
+            return data
         else:
             data = self.dataset[possibly_batched_index]
         return self.collate_fn(data)
