@@ -56,6 +56,9 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             print("something: {}".format(type(data[0][0])))
             print("type: {}".format(type(data[0])))
             print("data[0]: {}".format(data[0]))
+            foo = [self.dataset[idx] for idx in possibly_batched_index]
+            print("equal? {}".format(foo == data))
+            print("\n\n\ndata = {}\n\n\nfoo = {}\n\n\n".format(data, foo))
             return data
         else:
             data = self.dataset[possibly_batched_index]

@@ -67,7 +67,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
 
                 # balloons is a dict, with PyBalloons organized by size.
                 for elem in data:
-                    size = elem[0].nelement() * elem[0].element_size()
+                    size = elem.nelement() * elem.element_size()
                     balloon = None
 
                     has_balloon = False
