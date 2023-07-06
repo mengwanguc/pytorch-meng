@@ -46,9 +46,9 @@ class _DatasetKind(object):
     Iterable = 1
 
     @staticmethod
-    def create_fetcher(kind, dataset, auto_collation, collate_fn, drop_last, n_loader_threads):
+    def create_fetcher(kind, dataset, auto_collation, collate_fn, drop_last):
         if kind == _DatasetKind.Map:
-            return _utils.fetch._MapDatasetFetcher(dataset, auto_collation, collate_fn, drop_last, n_loader_threads)
+            return _utils.fetch._MapDatasetFetcher(dataset, auto_collation, collate_fn, drop_last)
         else:
             return _utils.fetch._IterableDatasetFetcher(dataset, auto_collation, collate_fn, drop_last)
 
@@ -913,7 +913,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
 
         self._balloons = balloons # For mlock.PyBalloon reuse in emulator.
-        self._n_loader_threads = n_loader_threads # Number of concurrent images to be loader per worker process
+        self._dataset._n_loader_threads = n_loader_threads
         self._index_queues = []
         self._workers = []
         for i in range(self._num_workers):
@@ -928,7 +928,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._worker_result_queue, self._workers_done_event,
                       self._auto_collation, self._collate_fn, self._drop_last,
                       self._base_seed + i, self._worker_init_fn, i, self._num_workers,
-                      self._persistent_workers, self._n_loader_threads))
+                      self._persistent_workers))
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.

@@ -121,7 +121,7 @@ class _ResumeIteration(object):
 
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers, n_loader_threads):
+                 num_workers, persistent_workers):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -149,7 +149,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             if init_fn is not None:
                 init_fn(worker_id)
 
-            fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last, n_loader_threads)
+            fetcher = _DatasetKind.create_fetcher(dataset_kind, dataset, auto_collation, collate_fn, drop_last)
         except Exception:
             init_exception = ExceptionWrapper(
                 where="in DataLoader worker process {}".format(worker_id))
@@ -181,7 +181,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 iteration_end = False
                 # Recreate the fetcher for worker-reuse policy
                 fetcher = _DatasetKind.create_fetcher(
-                    dataset_kind, dataset, auto_collation, collate_fn, drop_last, n_loader_threads)
+                    dataset_kind, dataset, auto_collation, collate_fn, drop_last)
                 continue
             elif r is None:
                 # Received the final signal
@@ -199,7 +199,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 init_exception = None
             else:
                 try:
-                    data = fetcher.fetch(index, n_loader_threads)
+                    data = fetcher.fetch(index)
                 except Exception as e:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         data = _IterableDatasetStopIteration(worker_id)
