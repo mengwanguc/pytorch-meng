@@ -47,6 +47,8 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
 
     async def load_single_data(self, index, semaphore):
         async with semaphore:
+            if index % 1024 == 0:
+                print("Active threads: {}".format(self.max_threads - semaphore._value))
             return await asyncio.to_thread(self.load_single_data_blocking, index)
 
     async def load_many_data(self, indices):
