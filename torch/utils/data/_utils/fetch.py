@@ -3,7 +3,7 @@ data from an iterable-style or map-style dataset. This logic is shared in both
 single- and multi-processing data loading.
 """
 
-import asyncio
+# import asyncio
 import time
 
 class _BaseDatasetFetcher(object):
@@ -42,22 +42,23 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
         self.max_threads = dataset._n_loader_threads
 
-    def load_single_data_blocking(self, index):
-        return self.dataset[index]
+    # def load_single_data_blocking(self, index):
+    #     return self.dataset[index]
 
-    async def load_single_data(self, index, semaphore):
-        async with semaphore:
-            if index % 1024 == 0:
-                print("Active threads: {}".format(self.max_threads - semaphore._value))
-            return await asyncio.to_thread(self.load_single_data_blocking, index)
+    # async def load_single_data(self, index, semaphore):
+    #     async with semaphore:
+    #         if index % 1024 == 0:
+    #             print("Active threads: {}".format(self.max_threads - semaphore._value))
+    #         return await asyncio.to_thread(self.load_single_data_blocking, index)
 
-    async def load_many_data(self, indices):
-        semaphore = asyncio.Semaphore(self.max_threads)
-        return await asyncio.gather(*(self.load_single_data(index, semaphore) for index in indices))
+    # async def load_many_data(self, indices):
+    #     semaphore = asyncio.Semaphore(self.max_threads)
+    #     return await asyncio.gather(*(self.load_single_data(index, semaphore) for index in indices))
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
-            data = asyncio.run(self.load_many_data(possibly_batched_index))
+            data = [self.dataset[index] for index in possibly_batched_index]
+            # data = asyncio.run(self.load_many_data(possibly_batched_index))
         else:
             data = self.dataset[possibly_batched_index]
         return self.collate_fn(data)
