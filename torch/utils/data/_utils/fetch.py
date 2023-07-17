@@ -40,8 +40,23 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
 
     def fetch(self, possibly_batched_index):
+        if hasattr(self.dataset, 'use_file_group') and self.dataset.use_file_group == True:
+            if self.auto_collation:
+                data = mytar_load_data(self.dataset, possibly_batched_index)
+            else:
+                data = self.dataset[possibly_batched_index]
+            return self.collate_fn(data)
         if self.auto_collation:
             data = [self.dataset[idx] for idx in possibly_batched_index]
         else:
             data = self.dataset[possibly_batched_index]
         return self.collate_fn(data)
+
+def mytar_load_data(dataset, possibly_batched_index):
+    data = []
+    for idx in possibly_batched_index:
+        imgs, targets = dataset[idx]
+        for i in range(len(imgs)):
+            per_image = imgs[i], targets[i]
+            data.append(per_image)
+    return data
