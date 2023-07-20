@@ -136,6 +136,7 @@ class DataParallel(Module):
         self.dim = dim
         self.module = module
         self.device_ids = [_get_device_index(x, True) for x in device_ids]
+        print("torch/nn/parallel/data_parallel.py: device_ids: {}".format(self.device_ids))
         self.output_device = _get_device_index(output_device, True)
         self.src_device_obj = torch.device(device_type, self.device_ids[0])
 
