@@ -7,7 +7,7 @@ single- and multi-processing data loading.
 class _BaseDatasetFetcher(object):
     def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
         self.worker_id = worker_id
-        self.async_worker = dataset.async_loader.get_worker_context(worker_id)
+        self.async_worker = dataset.async_loader.get_worker_context(id=worker_id)
         self.dataset = dataset
         self.auto_collation = auto_collation
         self.collate_fn = collate_fn
