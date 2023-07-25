@@ -37,20 +37,19 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
 
 class _MapDatasetFetcher(_BaseDatasetFetcher):
     def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
-        super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
-
-        # Only define the worker for the MapDatasetFetcher
-        self.worker = self.dataset.async_loader.get_worker_context(worker_id)
+        super(_MapDatasetFetcher, self).__init__(worker_id, dataset, auto_collation, collate_fn, drop_last)
 
     def fetch(self, possibly_batched_index):
+        worker = self.dataset.async_loader.get_worker_context(self.worker_id)
+
         if self.auto_collation:
             # Request images to be loaded.
             for index in possibly_batched_index:
                 print("Requesting {} from async loader", self.dataset.samples[index])
-                self.worker.request(self.dataset.samples[index])
+                worker.request(self.dataset.samples[index])
 
             # Get loaded images.
-            data = [self.worker.wait_get() for _ in possibly_batched_index]
+            data = [worker.wait_get() for _ in possibly_batched_index]
         else:
             # Async loader must be run with auto collation.
             assert(False)
