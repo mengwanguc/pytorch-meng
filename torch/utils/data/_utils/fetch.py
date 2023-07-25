@@ -9,7 +9,10 @@ from PIL import Image
 class _BaseDatasetFetcher(object):
     def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
         self.worker_id = worker_id
-        self.async_worker = dataset.async_loader.get_worker_context(worker_id)
+        if dataset.async_loader:
+            self.async_worker = dataset.async_loader.get_worker_context(worker_id)
+        else:
+            self.async_worker = None
         self.dataset = dataset
         self.auto_collation = auto_collation
         self.collate_fn = collate_fn
@@ -45,27 +48,30 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
-            # Request images to be loaded.
-            for index in possibly_batched_index:
-                self.async_worker.request(self.dataset.samples[index][0])
+            if self.async_worker:
+                # Request images to be loaded.
+                for index in possibly_batched_index:
+                    self.async_worker.request(self.dataset.samples[index][0])
 
-            # Get loaded images.
-            data = []
-            for index in possibly_batched_index:
-                path, target = self.dataset.samples[index]
+                # Get loaded images.
+                data = []
+                for index in possibly_batched_index:
+                    path, target = self.dataset.samples[index]
 
-                # Equivalent behvaiour to "loader" method
-                entry = self.async_worker.wait_get()
-                sample = Image.open(io.BytesIO(entry.get_data())).convert('RGB')
-                entry.release()
+                    # Equivalent behvaiour to "loader" method
+                    entry = self.async_worker.wait_get()
+                    sample = Image.open(io.BytesIO(entry.get_data())).convert('RGB')
+                    entry.release()
 
-                # Equivalent behaviour to "__getitem__" method
-                if self.dataset.transform is not None:
-                    sample = self.dataset.transform(sample)
-                if self.dataset.target_transform is not None:
-                    target = self.dataset.target_transform(target)
-                
-                data.append((sample, target))
+                    # Equivalent behaviour to "__getitem__" method
+                    if self.dataset.transform is not None:
+                        sample = self.dataset.transform(sample)
+                    if self.dataset.target_transform is not None:
+                        target = self.dataset.target_transform(target)
+                    
+                    data.append((sample, target))
+            else:
+                data = [self.dataset[index] for index in possibly_batched_index]
 
         else:
             # Async loader must be run with auto collation.
