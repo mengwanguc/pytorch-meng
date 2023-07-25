@@ -52,10 +52,22 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
 
             # Get loaded images.
             data = []
-            for _ in possibly_batched_index:
+            for index in possibly_batched_index:
+                path, target = self.samples[index]
+
+                # Equivalent behvaiour to "loader" method
                 entry = self.async_worker.wait_get()
-                data.append(Image.open(io.BytesIO(entry.get_data())).convert('RGB'))
+                sample = Image.open(io.BytesIO(entry.get_data())).convert('RGB')
                 entry.release()
+
+                # Equivalent behaviour to "__getitem__" method
+                if self.dataset.transform is not None:
+                    sample = self.dataset.transform(sample)
+                if self.dataset.target_transform is not None:
+                    target = self.dataset.target_transform(target)
+                
+                data.append((sample, target))
+
         else:
             # Async loader must be run with auto collation.
             assert(False)
