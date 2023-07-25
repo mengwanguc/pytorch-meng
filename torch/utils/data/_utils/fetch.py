@@ -53,7 +53,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             # Get loaded images.
             data = []
             for index in possibly_batched_index:
-                path, target = self.samples[index]
+                path, target = self.dataset.samples[index]
 
                 # Equivalent behvaiour to "loader" method
                 entry = self.async_worker.wait_get()
