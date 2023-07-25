@@ -45,11 +45,15 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         if self.auto_collation:
             # Request images to be loaded.
             for index in possibly_batched_index:
-                print("Requesting {} from async loader", self.dataset.samples[index])
+                print("Requesting {} from async loader".format(self.dataset.samples[index]))
                 self.async_worker.request(self.dataset.samples[index][0])
 
             # Get loaded images.
-            data = [self.async_worker.wait_get() for _ in possibly_batched_index]
+            data = []
+            for _ in possibly_batched_index:
+                entry = self.async_worker.wait_get()
+                data.append(entry.get_data())
+                entry.release()
         else:
             # Async loader must be run with auto collation.
             assert(False)
