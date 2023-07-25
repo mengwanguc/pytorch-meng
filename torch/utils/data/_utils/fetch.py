@@ -7,7 +7,7 @@ single- and multi-processing data loading.
 class _BaseDatasetFetcher(object):
     def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
         self.worker_id = worker_id
-        self.async_worker = dataset.async_loader.get_worker_context(id=worker_id)
+        self.async_worker = dataset.async_loader.get_worker_context(worker_id)
         self.dataset = dataset
         self.auto_collation = auto_collation
         self.collate_fn = collate_fn
@@ -46,7 +46,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             # Request images to be loaded.
             for index in possibly_batched_index:
                 print("Requesting {} from async loader", self.dataset.samples[index])
-                self.async_worker.request(self.dataset.samples[index])
+                self.async_worker.request(self.dataset.samples[index][0])
 
             # Get loaded images.
             data = [self.async_worker.wait_get() for _ in possibly_batched_index]
