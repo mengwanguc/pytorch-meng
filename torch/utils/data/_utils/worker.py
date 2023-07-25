@@ -170,7 +170,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
         watchdog = ManagerWatchdog()
 
-        while watchdog.is_alive():
+        while watchdog.is_alive():                                                                          # REWORK
             try:
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
             except queue.Empty:
@@ -180,8 +180,14 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 data_queue.put((r, None))
                 iteration_end = False
                 # Recreate the fetcher for worker-reuse policy
-                fetcher = _DatasetKind.create_fetcher(
-                    dataset_kind, dataset, auto_collation, collate_fn, drop_last)
+                fetcher = _DatasetKind.create_fetcher(                                                      # DELETE?
+                    worker_id,
+                    dataset_kind,
+                    dataset,
+                    auto_collation,
+                    collate_fn,
+                    drop_last
+                )
                 continue
             elif r is None:
                 # Received the final signal

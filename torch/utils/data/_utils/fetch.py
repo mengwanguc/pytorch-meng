@@ -5,7 +5,7 @@ single- and multi-processing data loading.
 
 
 class _BaseDatasetFetcher(object):
-    def __init__(self, dataset, auto_collation, collate_fn, drop_last):
+    def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
         self.dataset = dataset
         self.auto_collation = auto_collation
         self.collate_fn = collate_fn
@@ -16,7 +16,7 @@ class _BaseDatasetFetcher(object):
 
 
 class _IterableDatasetFetcher(_BaseDatasetFetcher):
-    def __init__(self, dataset, auto_collation, collate_fn, drop_last):
+    def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
         super(_IterableDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
         self.dataset_iter = iter(dataset)
 
@@ -36,12 +36,23 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
 
 
 class _MapDatasetFetcher(_BaseDatasetFetcher):
-    def __init__(self, dataset, auto_collation, collate_fn, drop_last):
+    def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
         super(_MapDatasetFetcher, self).__init__(dataset, auto_collation, collate_fn, drop_last)
+
+        # Only define the worker for the MapDatasetFetcher
+        self.worker = self.dataset.async_loader.get_worker_context(worker_id)
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
-            data = [self.dataset[idx] for idx in possibly_batched_index]
+            # Request images to be loaded.
+            for index in possibly_batched_index:
+                print("Requesting {} from async loader", self.dataset.samples[index])
+                self.worker.request(self.dataset.samples[index])
+
+            # Get loaded images.
+            data = [self.worker.wait_get() for _ in possibly_batched_index]
         else:
+            # Async loader must be run with auto collation.
+            assert(False)
             data = self.dataset[possibly_batched_index]
         return self.collate_fn(data)
