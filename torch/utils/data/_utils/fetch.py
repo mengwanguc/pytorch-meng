@@ -3,6 +3,8 @@ data from an iterable-style or map-style dataset. This logic is shared in both
 single- and multi-processing data loading.
 """
 
+import io
+from PIL import Image
 
 class _BaseDatasetFetcher(object):
     def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
@@ -52,7 +54,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             data = []
             for _ in possibly_batched_index:
                 entry = self.async_worker.wait_get()
-                data.append(entry.get_data())
+                data.append(Image.open(io.BytesIO(entry.get_data())).convert('RGB'))
                 entry.release()
         else:
             # Async loader must be run with auto collation.
