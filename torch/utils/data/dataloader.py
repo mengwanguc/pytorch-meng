@@ -46,11 +46,11 @@ class _DatasetKind(object):
     Iterable = 1
 
     @staticmethod
-    def create_fetcher(kind, dataset, auto_collation, collate_fn, drop_last):
+    def create_fetcher(kind, worker_id, dataset, auto_collation, collate_fn, drop_last):
         if kind == _DatasetKind.Map:
-            return _utils.fetch._MapDatasetFetcher(dataset, auto_collation, collate_fn, drop_last)
+            return _utils.fetch._MapDatasetFetcher(worker_id, dataset, auto_collation, collate_fn, drop_last)
         else:
-            return _utils.fetch._IterableDatasetFetcher(dataset, auto_collation, collate_fn, drop_last)
+            return _utils.fetch._IterableDatasetFetcher(worker_id, dataset, auto_collation, collate_fn, drop_last)
 
 
 class _InfiniteConstantSampler(Sampler):
