@@ -9,6 +9,8 @@ from typing import NamedTuple
 
 import torch
 
+import time
+
 from . import comm
 import torch.distributed as dist
 
@@ -360,7 +362,9 @@ class DistributedDataParallel(Module):
                  check_reduction=False,
                  gradient_as_bucket_view=False):
 
+        print("start super init")
         super(DistributedDataParallel, self).__init__()
+        print("done super init")
 
         assert any((p.requires_grad for p in module.parameters())), (
             "DistributedDataParallel is not needed when a module "
@@ -368,6 +372,8 @@ class DistributedDataParallel(Module):
         )
 
         self.is_multi_device_module = len({p.device for p in module.parameters()}) > 1
+        print("module.parameters:{}".format(module.parameters()))
+        print("module parameter devices: {}".format({p.device for p in module.parameters()}))
         distinct_device_types = {p.device.type for p in module.parameters()}
         assert len(distinct_device_types) == 1, (
             "DistributedDataParallel's input module must be on "
@@ -396,10 +402,17 @@ class DistributedDataParallel(Module):
 
             self.output_device = _get_device_index(output_device, True)
 
+        print("done setting devides. self.devide_ids: {}  output_device: {}".format(
+                    self.device_ids, self.output_device))
+        
+        print("starting to get process group... process_group:{}".format(process_group))
+
         if process_group is None:
             self.process_group = _get_default_group()
         else:
             self.process_group = process_group
+        
+        print("done getting process_group:{}".format(self.process_group))
 
         self.dim = dim
         self.module = module
@@ -417,6 +430,7 @@ class DistributedDataParallel(Module):
         else:
             self.parameters_to_ignore = []
 
+        print("start to check reduction")
         if check_reduction:
             # This argument is no longer used since the reducer
             # will ensure reduction completes even if some parameters
@@ -440,9 +454,13 @@ class DistributedDataParallel(Module):
         self.bucket_bytes_cap = int(bucket_cap_mb * 1024 * 1024)
 
         # Sync params and buffers
+        print("start to _sync_params_and_buffers ")
         self._sync_params_and_buffers(authoritative_rank=0)
 
+        print("start _ddp_init_helper")
+
         self._ddp_init_helper()
+        print("end of DistributedDataParallel __init__")
 
     def _sync_params_and_buffers(self, authoritative_rank=0):
         module_states = []
@@ -672,6 +690,7 @@ class DistributedDataParallel(Module):
 
     def forward(self, *inputs, **kwargs):
         if self.ddp_uneven_inputs_config.ddp_join_enabled:
+            print("self.ddp_uneven_inputs_config.ddp_join_enabled")
             ones = torch.ones(
                 1, device=self.device
             )
@@ -690,7 +709,11 @@ class DistributedDataParallel(Module):
             logging.info("Reducer buckets have been rebuilt in this iteration.")
 
         if self.require_forward_param_sync:
+            print("FORWARD: self.require_forward_param_sync")
+            sync_start = time.time()
             self._sync_params()
+            sync_end = time.time()
+            print("sync time: {}".format(sync_end - sync_start))
 
         if self.ddp_uneven_inputs_config.ddp_join_enabled:
             # Notify joined ranks whether they should sync in backwards pass or not.
@@ -1133,6 +1156,7 @@ class DistributedDataParallel(Module):
     def _distributed_broadcast_coalesced(
         self, tensors, buffer_size, authoritative_rank=0
     ):
+        print("in _distributed_broadcast_coalesced")
         dist._broadcast_coalesced(
             self.process_group, tensors, buffer_size, authoritative_rank
         )
