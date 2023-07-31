@@ -172,8 +172,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
         while watchdog.is_alive():                                                                          # REWORK
             try:
-                print("length of index queue:", index_queue.qsize())
-                print("length of data  queue:", data_queue.qsize())
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
             except queue.Empty:
                 continue
