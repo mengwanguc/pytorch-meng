@@ -51,6 +51,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             if self.async_worker:
                 # Request images to be loaded.
                 for index in possibly_batched_index:
+                    print("index", index)
                     self.async_worker.request(self.dataset.samples[index][0])
 
                 # Get loaded images.
