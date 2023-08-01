@@ -717,10 +717,12 @@ class DistributedDataParallel(Module):
 
         if self.ddp_uneven_inputs_config.ddp_join_enabled:
             # Notify joined ranks whether they should sync in backwards pass or not.
+            print("self._check_global_requires_backward_grad_sync(is_joined_rank=False)")
             self._check_global_requires_backward_grad_sync(is_joined_rank=False)
 
         if self.device_ids:
             if len(self.device_ids) == 1:
+                print("len(self.device_ids) == 1")
                 inputs, kwargs = self.to_kwargs(inputs, kwargs, self.device_ids[0])
                 output = self.module(*inputs[0], **kwargs[0])
             else:
@@ -730,7 +732,10 @@ class DistributedDataParallel(Module):
         else:
             output = self.module(*inputs, **kwargs)
 
+
+        require_forward_param_sync_start = time.time()
         if torch.is_grad_enabled() and self.require_backward_grad_sync:
+            print("self.require_forward_param_sync = True")
             self.require_forward_param_sync = True
             # We'll return the output object verbatim since it is a freeform
             # object. We need to find any tensors in this object, though,
@@ -743,6 +748,9 @@ class DistributedDataParallel(Module):
                 self.reducer.prepare_for_backward([])
         else:
             self.require_forward_param_sync = False
+        require_forward_param_sync_end = time.time()
+        require_forward_param_sync_time = require_forward_param_sync_end - require_forward_param_sync_start
+        print("require_forward_param_sync_times: {}".format(require_forward_param_sync_time))
 
         return output
 
@@ -1156,7 +1164,7 @@ class DistributedDataParallel(Module):
     def _distributed_broadcast_coalesced(
         self, tensors, buffer_size, authoritative_rank=0
     ):
-        print("in _distributed_broadcast_coalesced")
+        print("in _distributed_broadcast_coalesced  process_group: {}".format(self.process_group))
         dist._broadcast_coalesced(
             self.process_group, tensors, buffer_size, authoritative_rank
         )
@@ -1187,6 +1195,7 @@ class DistributedDataParallel(Module):
             # only do intra-node parameters sync for replicated single-device
             # CUDA modules
             if self.device_ids and len(self.device_ids) > 1:
+                print("self.device_ids and len(self.device_ids) > 1")
                 # intra-node parameter sync
                 result = comm.broadcast_coalesced(
                     self.modules_params[0],
@@ -1215,6 +1224,7 @@ class DistributedDataParallel(Module):
 
             # module buffer sync
             if self.will_sync_module_buffers():
+                print("self.will_sync_module_buffers()")
                 # Synchronize buffers across processes.
                 # If we are running DDP with the join manager, we have to agree
                 # upon a rank to sync module buffers from, since rank 0 may
@@ -1224,6 +1234,8 @@ class DistributedDataParallel(Module):
                 else:
                     # The process with rank 0 is considered the authoritative copy.
                     authoritative_rank = 0
+                print("self.broadcast_bucket_size: {}  authoritative_rank: {}".format(
+                            self.broadcast_bucket_size, authoritative_rank))
                 self._distributed_broadcast_coalesced(
                     self.modules_buffers[0],
                     self.broadcast_bucket_size,
