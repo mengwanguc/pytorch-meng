@@ -48,28 +48,8 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
 
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
-            if self.async_worker:
-                # Request images to be loaded.
-                for index in possibly_batched_index:
-                    self.async_worker.request(self.dataset.samples[index][0])
-
-                # Get loaded images.
-                data = []
-                for index in possibly_batched_index:
-                    path, target = self.dataset.samples[index]
-
-                    # Equivalent behvaiour to "loader" method
-                    entry = self.async_worker.wait_get()
-                    sample = Image.open(io.BytesIO(entry.get_data())).convert('RGB')
-                    entry.release()
-
-                    # Equivalent behaviour to "__getitem__" method
-                    if self.dataset.transform is not None:
-                        sample = self.dataset.transform(sample)
-                    if self.dataset.target_transform is not None:
-                        target = self.dataset.target_transform(target)
-                    
-                    data.append((sample, target))
+            if self.dataset.load_indices:
+                data = self.dataset.load_indices(self.async_worker, self.dataset, possibly_batched_index)
             else:
                 data = [self.dataset[index] for index in possibly_batched_index]
 
