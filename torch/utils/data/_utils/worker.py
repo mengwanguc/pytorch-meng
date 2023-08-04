@@ -187,34 +187,35 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             # Handle special cases. If this is the resume iteration, create the
             # fetcher and remove the resume iteration from the to_load list. If
             # this is the final iteration, cleanly shut down.
-            if isinstance(to_load[0], _ResumeIteration):
-                print("Resume iteration detected ({})".format(os.getpid()))
-                r = to_load.pop(0)
+            for i, indices in enumerate(to_load):
+                if isinstance(indices, _ResumeIteration):
+                    print("Resume iteration detected ({})".format(os.getpid()))
+                    to_load = to_load[i:]
 
-                # Acknowledge the main process
-                data_queue.put((r, None))
-                iteration_end = False
-                # Recreate the fetcher for worker-reuse policy
-                fetcher = _DatasetKind.create_fetcher(                                                      # DELETE?
-                    dataset_kind,
-                    worker_id,
-                    dataset,
-                    auto_collation,
-                    collate_fn,
-                    drop_last
-                )
-                continue
-            elif to_load[0] is None:
-                print("Final signal ({})".format(os.getpid()))
-                # Received the final signal
-                assert done_event.is_set() or iteration_end
-                break
-            elif done_event.is_set() or iteration_end:
-                print("Done event ({})".format(os.getpid()))
-                # `done_event` is set. But I haven't received the final signal
-                # (None) yet. I will keep continuing until get it, and skip the
-                # processing steps.
-                continue
+                    # Acknowledge the main process
+                    data_queue.put((indices, None))
+                    iteration_end = False
+                    # Recreate the fetcher for worker-reuse policy
+                    fetcher = _DatasetKind.create_fetcher(                                                      # DELETE?
+                        dataset_kind,
+                        worker_id,
+                        dataset,
+                        auto_collation,
+                        collate_fn,
+                        drop_last
+                    )
+                    continue
+                elif to_load[0] is None:
+                    print("Final signal ({})".format(os.getpid()))
+                    # Received the final signal
+                    assert done_event.is_set() or iteration_end
+                    break
+                elif done_event.is_set() or iteration_end:
+                    print("Done event ({})".format(os.getpid()))
+                    # `done_event` is set. But I haven't received the final signal
+                    # (None) yet. I will keep continuing until get it, and skip the
+                    # processing steps.
+                    continue
 
             print("Combining things ({})".format(os.getpid()))
             # Combine everything so we can give the loader one big batch.
