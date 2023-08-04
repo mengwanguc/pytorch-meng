@@ -200,6 +200,7 @@ class DataLoader(Generic[T_co]):
         self.estimated_pin_mem_time = estimated_pin_mem_time
         self.emulator_version = emulator_version
         self.balloons = balloons
+        self.super_batch = super_batch
 
         # Arg-check dataset related before checking samplers because we want to
         # tell users that iterable-style datasets are incompatible with custom
