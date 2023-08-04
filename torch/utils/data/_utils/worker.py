@@ -121,7 +121,7 @@ class _ResumeIteration(object):
 
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers):
+                 num_workers, persistent_workers, prefetch_factor):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -170,12 +170,22 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
         watchdog = ManagerWatchdog()
 
+        to_load = []
+        loaded = []
         while watchdog.is_alive():                                                                          # REWORK
+            # Fetch up to PREFETCH_FACTOR batched indices from the queue
             try:
-                r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+                for _ in range(prefetch_factor):
+                    to_load.append(index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL))
             except queue.Empty:
-                continue
-            if isinstance(r, _ResumeIteration):
+                pass
+            
+            # Handle special cases. If this is the resume iteration, create the
+            # fetcher and remove the resume iteration from the to_load list. If
+            # this is the final iteration, cleanly shut down.
+            if isinstance(to_load[0], _ResumeIteration):
+                r = to_load.pop(0)
+
                 # Acknowledge the main process
                 data_queue.put((r, None))
                 iteration_end = False
@@ -189,7 +199,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     drop_last
                 )
                 continue
-            elif r is None:
+            elif to_load[0] is None:
                 # Received the final signal
                 assert done_event.is_set() or iteration_end
                 break
@@ -198,17 +208,25 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 # (None) yet. I will keep continuing until get it, and skip the
                 # processing steps.
                 continue
-            idx, index = r
+
+            # Combine everything so we can give the loader one big batch.
+            all_idx = [] # don't ask me the difference... loader gets INDEX not IDX.
+            all_index = []
+            for idx, index in to_load:
+                all_idx.extend(idx)
+                all_index.extend(index)
+            del idx, index
+
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
             if init_exception is not None:
                 data = init_exception
                 init_exception = None
             else:
                 try:
-                    data = fetcher.fetch(index)
+                    all_data = fetcher.fetch(all_index)
                 except Exception as e:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
-                        data = _IterableDatasetStopIteration(worker_id)
+                        all_data = _IterableDatasetStopIteration(worker_id)
                         # Set `iteration_end`
                         #   (1) to save future `next(...)` calls, and
                         #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
@@ -219,8 +237,16 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
                         data = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
-            data_queue.put((idx, data))
-            del data, idx, index, r  # save memory
+                        
+            offset = 0
+            for length in [len(elem) for elem in to_load]:
+                idx = all_idx[offset : offset + length]
+                data = all_data[offset : offset + length]
+                offset += length
+
+                data_queue.put((idx, data))
+
+            del all_data, data, all_idx, all_index, idx # save memory
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass

@@ -1212,6 +1212,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
             # Now `self._rcvd_idx` is the batch index we want to fetch
 
+            # Could we statefully store some of the data (e.g., X-batches) and then pull from this state until its empty?
+
             # Check if the next sample has already been generated
             if len(self._task_info[self._rcvd_idx]) == 2:
                 data = self._task_info.pop(self._rcvd_idx)[1]
@@ -1237,6 +1239,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 del self._task_info[idx]
                 return self._process_data(data)
 
+    # FUNCTION THAT ADDS DATA TO WORKER INPUT QUEUES
     def _try_put_index(self):
         assert self._tasks_outstanding < self._prefetch_factor * self._num_workers
 
@@ -1252,7 +1255,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             # not found (i.e., didn't break)
             return
 
-        self._index_queues[worker_queue_idx].put((self._send_idx, index))
+        self._index_queues[worker_queue_idx].put((self._send_idx, index)) # !!! HERE !!!
         self._task_info[self._send_idx] = (worker_queue_idx,)
         self._tasks_outstanding += 1
         self._send_idx += 1

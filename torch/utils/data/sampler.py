@@ -226,6 +226,7 @@ class BatchSampler(Sampler[List[int]]):
         self.batch_size = batch_size
         self.drop_last = drop_last
 
+    # !!!gus!!! I can increase the batch size here
     def __iter__(self):
         batch = []
         for idx in self.sampler:
