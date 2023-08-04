@@ -169,7 +169,8 @@ class DataLoader(Generic[T_co]):
                  is_emulator: bool = False,
                  estimated_pin_mem_time: float = 0.0,
                  emulator_version: int = 0,
-                 balloons: dict = dict()):
+                 balloons: dict = dict(),
+                 super_batch: int = 1):
         torch._C._log_api_usage_once("python.data_loader")  # type: ignore
 
         if num_workers < 0:
