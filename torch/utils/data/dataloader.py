@@ -310,7 +310,7 @@ class DataLoader(Generic[T_co]):
             return _SingleProcessDataLoaderIter(self)
         else:
             self.check_worker_number_rationality()
-            return _MultiProcessingDataLoaderIter(self, self.balloons)
+            return _MultiProcessingDataLoaderIter(self, self.balloons, self.super_batch)
 
     @property
     def multiprocessing_context(self):
