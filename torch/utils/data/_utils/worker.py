@@ -121,7 +121,7 @@ class _ResumeIteration(object):
 
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers, prefetch_factor):
+                 num_workers, persistent_workers, prefetch_factor, super_batch):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -175,10 +175,10 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             to_load = []
             loaded = []
 
-            # Fetch up to PREFETCH_FACTOR batched indices from the queue
+            # Fetch up to SUPER_BATCH batched indices from the queue
             print("Getting items from queue... ({})".format(os.getpid()))
             try:
-                for _ in range(prefetch_factor):
+                for _ in range(super_batch):
                     to_load.append(index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL))
             except queue.Empty:
                 pass
@@ -221,8 +221,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             all_idx = [] # don't ask me the difference... loader gets INDEX not IDX.
             all_index = []
             for idx, index in to_load:
-                all_idx.extend(idx)
-                all_index.extend(index)
+                all_idx.append(idx)
+                all_index.append(index)
             del idx, index
             print("Combined things ({})".format(os.getpid()))
 
@@ -249,15 +249,11 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         data = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
                         
+            print("Putting into data queue ({})".format(os.getpid()))
             offset = 0
-            print("Splitting things up ({})".format(os.getpid()))
-            for length in [len(elem) for elem in to_load]:
-                idx = all_idx[offset : offset + length]
-                data = all_data[offset : offset + length]
-                offset += length
-
+            for idx, data in zip(all_idx, all_data):
                 data_queue.put((idx, data))
-            print("Done splitting ({})".format(os.getpid()))
+            print("Done with data queue ({})".format(os.getpid()))
 
             del all_data, data, all_idx, all_index, idx # save memory
     except KeyboardInterrupt:
