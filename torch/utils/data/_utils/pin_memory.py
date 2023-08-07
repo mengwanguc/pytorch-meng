@@ -26,7 +26,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, batch_size):
     # logic of this function.
     while not done_event.is_set():
         # Prevent over-committing memory due to large super batches
-        if (out_queue.qsize >= batch_size):
+        if (out_queue.qsize() >= batch_size):
             continue
 
         try:
@@ -58,7 +58,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
 
     while not done_event.is_set():
         # Prevent over-committing memory due to large super batches
-        if (out_queue.qsize >= batch_size):
+        if (out_queue.qsize() >= batch_size):
             continue
 
         try:
