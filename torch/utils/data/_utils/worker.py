@@ -170,26 +170,22 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
         watchdog = ManagerWatchdog()
 
-        print("Starting worker loop ({})".format(os.getpid()))
         while watchdog.is_alive():                                                                          # REWORK
             to_load = []
             loaded = []
 
             # Fetch up to SUPER_BATCH batched indices from the queue
-            print("Getting items from queue... ({})".format(os.getpid()))
             try:
                 for _ in range(super_batch):
                     to_load.append(index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL))
             except queue.Empty:
                 pass
-            print("Got {} items from queue ({})".format(len(to_load), os.getpid()))
             
             # Handle special cases. If this is the resume iteration, create the
             # fetcher and remove the resume iteration from the to_load list. If
             # this is the final iteration, cleanly shut down.
             for i, indices in enumerate(to_load):
                 if isinstance(indices, _ResumeIteration):
-                    print("Resume iteration detected ({})".format(os.getpid()))
                     to_load = to_load[i:]
 
                     # Acknowledge the main process
@@ -206,18 +202,15 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     )
                     continue
                 elif to_load[0] is None:
-                    print("Final signal ({})".format(os.getpid()))
                     # Received the final signal
                     assert done_event.is_set() or iteration_end
                     break
                 elif done_event.is_set() or iteration_end:
-                    print("Done event ({})".format(os.getpid()))
                     # `done_event` is set. But I haven't received the final signal
                     # (None) yet. I will keep continuing until get it, and skip the
                     # processing steps.
                     continue
 
-            print("Combining things ({})".format(os.getpid()))
             # Combine everything so we can give the loader one big batch.
             all_idx = [] # don't ask me the difference... loader gets INDEX not IDX.
             all_index = []
@@ -225,7 +218,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 all_idx.append(idx)
                 all_index.append(index)
             del idx, index
-            print("Combined things ({})".format(os.getpid()))
 
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
             if init_exception is not None:
@@ -233,9 +225,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 init_exception = None
             else:
                 try:
-                    print("Loading everything ({})".format(os.getpid()))
                     all_data = fetcher.fetch(all_index)
-                    print("Done loading ({})".format(os.getpid()))
                 except Exception as e:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         all_data = _IterableDatasetStopIteration(worker_id)
@@ -250,11 +240,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         data = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
                         
-            print("Putting into data queue ({})".format(os.getpid()))
-            offset = 0
             for idx, data in zip(all_idx, all_data):
                 data_queue.put((idx, data))
-            print("Done with data queue ({})".format(os.getpid()))
 
             del all_data, data, all_idx, all_index, idx # save memory
     except KeyboardInterrupt:
