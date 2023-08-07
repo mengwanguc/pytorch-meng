@@ -109,9 +109,11 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
             r = (idx, data)
         while not done_event.is_set():
             try:
+                print("out_queue.put(); qsize = {}, capacity = {}".format(out_queue.qsize(), out_queue.maxsize))
                 out_queue.put(r, timeout=MP_STATUS_CHECK_INTERVAL)
                 break
             except queue.Full:
+                print("out_queue.put(); full")
                 continue
         del r  # save memory
 
