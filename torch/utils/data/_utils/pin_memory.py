@@ -15,7 +15,7 @@ import sys
 import mlock
 
 
-def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
+def _pin_memory_loop(in_queue, out_queue, device_id, done_event, batch_size):
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
     torch.set_num_threads(1)
@@ -51,7 +51,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
                 continue
         del r  # save memory
 
-def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time, balloons):
+def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time, balloons, batch_size):
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
     torch.set_num_threads(1)
