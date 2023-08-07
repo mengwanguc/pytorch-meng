@@ -312,7 +312,7 @@ class DataLoader(Generic[T_co]):
             return _SingleProcessDataLoaderIter(self)
         else:
             self.check_worker_number_rationality()
-            return _MultiProcessingDataLoaderIter(self, self.balloons, self.super_batch, self.batch_size)
+            return _MultiProcessingDataLoaderIter(self, self.balloons, self.super_batch)
 
     @property
     def multiprocessing_context(self):
@@ -893,7 +893,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
     #     processing indices already in `index_queue` if we are already shutting
     #     down.
 
-    def __init__(self, loader, balloons, super_batch, batch_size):
+    def __init__(self, loader, balloons, super_batch):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
 
         assert self._num_workers > 0
@@ -912,7 +912,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._shutdown = False
         self._workers_done_event = multiprocessing_context.Event()
 
-        self._batch_size = batch_size
         self._super_batch = super_batch
         self._balloons = balloons # For mlock.PyBalloon reuse in emulator.
         self._index_queues = []
@@ -950,7 +949,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 target=_utils.pin_memory._pin_memory_loop,
                 args=(self._worker_result_queue, self._data_queue,
                       torch.cuda.current_device(),
-                      self._pin_memory_thread_done_event, self._batch_size))
+                      self._pin_memory_thread_done_event, self._prefetch_factor))
             pin_memory_thread.daemon = True
             pin_memory_thread.start()
             # Similar to workers (see comment above), we only register
@@ -968,7 +967,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._pin_memory_thread_done_event,
                       self._estimated_pin_mem_time,
                       self._balloons,
-                      self._batch_size))
+                      self._prefetch_factor))
             emulate_pin_memory_thread.daemon = True
             emulate_pin_memory_thread.start()
             # Similar to workers (see comment above), we only register
