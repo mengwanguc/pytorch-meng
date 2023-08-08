@@ -224,9 +224,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 data = init_exception
                 init_exception = None
             else:
-                try:
-                    all_data = fetcher.fetch(all_index)
-                except Exception as e:
+                all_data, e = fetcher.fetch(all_index)
+                if e != None:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         all_data = _IterableDatasetStopIteration(worker_id)
                         # Set `iteration_end`
