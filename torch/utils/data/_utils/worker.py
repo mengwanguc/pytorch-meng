@@ -179,7 +179,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 for _ in range(super_batch):
                     to_load.append(index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL))
             except queue.Empty:
-                pass
+                if len(to_load) == 0:
+                    continue
             
             # Combine everything so we can give the loader one big batch.
             all_idx = [] # index of each batch
