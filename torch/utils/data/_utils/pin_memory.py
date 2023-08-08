@@ -55,12 +55,16 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
     torch.set_num_threads(1)
 
     while not done_event.is_set():
+        print("_emulate_pin_memory_loop")
+
         # Prevent over-committing memory due to large super batches
         if (out_queue.qsize() >= prefetch_factor):
             continue
 
         try:
+            print("get")
             r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+            print("got")
         except queue.Empty:
             continue
         idx, data = r
