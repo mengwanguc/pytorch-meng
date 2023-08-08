@@ -197,8 +197,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             # fetcher and remove the resume iteration from the to_load list. If
             # this is the final iteration, cleanly shut down.
             for i, indices in enumerate(to_load):
-                print("(pid {}) i = {}, indices = {}".format(os.getpid(), i, indices))
-
                 if isinstance(indices, _ResumeIteration):
                     # Acknowledge the main process
                     data_queue.put((indices, None))
@@ -219,6 +217,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     # Received the final signal
                     assert done_event.is_set() or iteration_end
                     final_signal = True
+                    break
                 elif done_event.is_set() or iteration_end:
                     # `done_event` is set. But I haven't received the final signal
                     # (None) yet. I will keep continuing until get it, and skip the
