@@ -175,7 +175,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             print("Worker loop (pid {}); final_signal = {}".format(os.getpid(), final_signal))
 
             to_load = []
-            
+
             # Fetch up to SUPER_BATCH batched indices from the queue
             try:
                 for _ in range(super_batch):
@@ -214,6 +214,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     )
                     continue
                 elif indices is None:
+                    print("Parsed a None!")
+
                     # Received the final signal
                     assert done_event.is_set() or iteration_end
                     final_signal = True
