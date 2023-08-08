@@ -172,6 +172,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
         final_signal = False
         while watchdog.is_alive() and not final_signal:                                                         # REWORK
+            print("Worker loop (pid {}); final_signal = {}".format(os.getpid(), final_signal))
+
             to_load = []
             loaded = []
 
