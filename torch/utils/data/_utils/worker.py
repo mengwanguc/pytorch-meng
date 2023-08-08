@@ -219,7 +219,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 all_index.append(index)
             del idx, index
 
-            data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
+            all_data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
             if init_exception is not None:
                 data = init_exception
                 init_exception = None
@@ -227,7 +227,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 all_data, e = fetcher.fetch(all_index)
                 if e != None:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
-                        all_data = _IterableDatasetStopIteration(worker_id)
+                        all_data[-1] = _IterableDatasetStopIteration(worker_id)
                         # Set `iteration_end`
                         #   (1) to save future `next(...)` calls, and
                         #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
@@ -236,7 +236,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         # It is important that we don't store exc_info in a variable.
                         # `ExceptionWrapper` does the correct thing.
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
-                        data = ExceptionWrapper(
+                        all_data[-1] = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
                         
             for idx, data in zip(all_idx, all_data):
