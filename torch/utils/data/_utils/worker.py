@@ -170,8 +170,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
         watchdog = ManagerWatchdog()
 
-        should_break = False
-        while watchdog.is_alive() and not should_break:                                                         # REWORK
+        final_signal = False
+        while watchdog.is_alive() and not final_signal:                                                         # REWORK
             to_load = []
             loaded = []
 
@@ -212,7 +212,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 elif indices is None:
                     # Received the final signal
                     assert done_event.is_set() or iteration_end
-                    should_break = True
+                    final_signal = True
                     break
                 elif done_event.is_set() or iteration_end:
                     # `done_event` is set. But I haven't received the final signal
@@ -224,6 +224,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 all_idx.append(indices[0])
                 all_index.append(indices[1])
 
+            if len(all_index) == 0:
+                continue
 
             all_data: List[Union[_IterableDatasetStopIteration, ExceptionWrapper]]
             if init_exception is not None:
