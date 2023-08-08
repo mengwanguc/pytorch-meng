@@ -260,6 +260,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
+
+    print("(pid {}) Loop done".format(os.getpid()))
     if done_event.is_set():
+        print("(pid {}) done event was set...".format(os.getpid()))
         data_queue.cancel_join_thread()
         data_queue.close()
