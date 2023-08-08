@@ -175,8 +175,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             print("Worker loop (pid {}); final_signal = {}".format(os.getpid(), final_signal))
 
             to_load = []
-            loaded = []
-
+            
             # Fetch up to SUPER_BATCH batched indices from the queue
             try:
                 for _ in range(super_batch):
@@ -184,6 +183,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     to_load.append(indices)
 
                     if indices == None:
+                        print("Saw a None!")
                         break
             except queue.Empty:
                 if len(to_load) == 0:
@@ -197,6 +197,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             # fetcher and remove the resume iteration from the to_load list. If
             # this is the final iteration, cleanly shut down.
             for i, indices in enumerate(to_load):
+                print("(pid {}) i = {}, indices = {}".format(os.getpid(), i, indices))
+
                 if isinstance(indices, _ResumeIteration):
                     # Acknowledge the main process
                     data_queue.put((indices, None))
