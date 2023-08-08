@@ -237,6 +237,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 init_exception = None
             else:
                 all_data, e = fetcher.fetch(all_index)
+                print("e = {}".format(e))
                 if e != None:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         print("Got the stop iteration.")
@@ -263,8 +264,5 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
     print("(pid {}) Loop done".format(os.getpid()))
     if done_event.is_set():
-        print("(pid {}) done event was set... waiting for empty queue".format(os.getpid()))
-        while (not data_queue.empty()): pass
-        print("(pid {}) queue is empty".format(os.getpid()))
         data_queue.cancel_join_thread()
         data_queue.close()
