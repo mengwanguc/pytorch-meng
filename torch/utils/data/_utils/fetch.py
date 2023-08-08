@@ -53,10 +53,11 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             else:
                 data = [self.dataset[index] for index in possibly_batched_index]
                 exception = None
+                assert False
 
         else:
             # Async loader must be run with auto collation.
             assert(False)
             data = self.dataset[possibly_batched_index]
         print("data:", data)
-        return self.collate_fn(data), exception
+        return [self.collate_fn(elem) for elem in data], exception
