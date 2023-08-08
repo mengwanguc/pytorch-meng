@@ -10,7 +10,7 @@ import os
 from dataclasses import dataclass
 from torch._six import queue
 from torch._utils import ExceptionWrapper
-from typing import Union
+from typing import Union, List
 from . import signal_handling, MP_STATUS_CHECK_INTERVAL, IS_WINDOWS
 
 if IS_WINDOWS:
@@ -181,13 +181,15 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             except queue.Empty:
                 pass
             
+            # Combine everything so we can give the loader one big batch.
+            all_idx = [] # index of each batch
+            all_index = [] # batch indices
+
             # Handle special cases. If this is the resume iteration, create the
             # fetcher and remove the resume iteration from the to_load list. If
             # this is the final iteration, cleanly shut down.
             for i, indices in enumerate(to_load):
                 if isinstance(indices, _ResumeIteration):
-                    to_load = to_load[i:]
-
                     # Acknowledge the main process
                     data_queue.put((indices, None))
                     iteration_end = False
@@ -211,17 +213,13 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     # processing steps.
                     continue
 
-            # Combine everything so we can give the loader one big batch.
-            all_idx = [] # don't ask me the difference... loader gets INDEX not IDX.
-            all_index = []
-            for idx, index in to_load:
-                all_idx.append(idx)
-                all_index.append(index)
-            del idx, index
+                # If they're OK, add to the "all-" lists for loading
+                all_idx.append(indices[0])
+                all_index.append(indices[1])
 
-            all_data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
+            all_data: List[Union[_IterableDatasetStopIteration, ExceptionWrapper]]
             if init_exception is not None:
-                data = init_exception
+                all_data = [init_exception]
                 init_exception = None
             else:
                 all_data, e = fetcher.fetch(all_index)
