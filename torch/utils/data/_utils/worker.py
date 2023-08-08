@@ -219,7 +219,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     # Received the final signal
                     assert done_event.is_set() or iteration_end
                     final_signal = True
-                    break
                 elif done_event.is_set() or iteration_end:
                     # `done_event` is set. But I haven't received the final signal
                     # (None) yet. I will keep continuing until get it, and skip the
