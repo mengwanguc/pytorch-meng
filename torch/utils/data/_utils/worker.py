@@ -171,7 +171,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         watchdog = ManagerWatchdog()
 
         final_signal = False
-        while watchdog.is_alive() and not final_signal:                                                         # REWORK
+        while watchdog.is_alive() and not final_signal:
             print("Worker loop (pid {}); final_signal = {}".format(os.getpid(), final_signal))
 
             to_load = []
@@ -253,7 +253,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         
             for idx, data in zip(all_idx, all_data):
                 data_queue.put((idx, data))
-
+                
             # del all_data, data, all_idx, all_index, idx # save memory
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
@@ -261,6 +261,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
     print("(pid {}) Loop done".format(os.getpid()))
     if done_event.is_set():
-        print("(pid {}) done event was set...".format(os.getpid()))
+        print("(pid {}) done event was set... waiting for empty queue".format(os.getpid()))
+        while (not data_queue.empty()): pass
+        print("(pid {}) queue is empty".format(os.getpid()))
         data_queue.cancel_join_thread()
         data_queue.close()
