@@ -209,7 +209,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         drop_last
                     )
                     continue
-                elif to_load[0] is None:
+                elif indices is None:
                     # Received the final signal
                     assert done_event.is_set() or iteration_end
                     should_break = True
