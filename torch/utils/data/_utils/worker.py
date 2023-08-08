@@ -240,7 +240,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             for idx, data in zip(all_idx, all_data):
                 data_queue.put((idx, data))
 
-            del all_data, data, all_idx, all_index, idx # save memory
+            # del all_data, data, all_idx, all_index, idx # save memory
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
