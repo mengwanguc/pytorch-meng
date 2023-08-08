@@ -239,12 +239,14 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 all_data, e = fetcher.fetch(all_index)
                 if e != None:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
+                        print("Got the stop iteration.")
                         all_data[-1] = _IterableDatasetStopIteration(worker_id)
                         # Set `iteration_end`
                         #   (1) to save future `next(...)` calls, and
                         #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
                         iteration_end = True
                     else:
+                        print("Got the other exception")
                         # It is important that we don't store exc_info in a variable.
                         # `ExceptionWrapper` does the correct thing.
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
@@ -253,7 +255,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         
             for idx, data in zip(all_idx, all_data):
                 data_queue.put((idx, data))
-                
+
             # del all_data, data, all_idx, all_index, idx # save memory
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
