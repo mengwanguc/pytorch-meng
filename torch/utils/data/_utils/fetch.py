@@ -49,13 +49,14 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             if self.dataset.load_indices:
-                data = self.dataset.load_indices(self.async_worker, self.dataset, possibly_batched_index)
+                data, exception = self.dataset.load_indices(self.async_worker, self.dataset, possibly_batched_index)
             else:
                 data = [self.dataset[index] for index in possibly_batched_index]
+                exception = None
 
         else:
             # Async loader must be run with auto collation.
             assert(False)
             data = self.dataset[possibly_batched_index]
         print("data:", data)
-        return self.collate_fn(data)
+        return self.collate_fn(data), exception
