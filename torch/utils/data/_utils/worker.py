@@ -10,7 +10,7 @@ import os
 from dataclasses import dataclass
 from torch._six import queue
 from torch._utils import ExceptionWrapper
-from typing import Union
+from typing import Union, List
 from . import signal_handling, MP_STATUS_CHECK_INTERVAL, IS_WINDOWS
 
 if IS_WINDOWS:
@@ -121,7 +121,7 @@ class _ResumeIteration(object):
 
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers):
+                 num_workers, persistent_workers, super_batch_size):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -167,45 +167,56 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         # `iteration_end` is set, we skip all processing step and just wait for
         # `None`.
         iteration_end = False
+        final_signal = False
 
         watchdog = ManagerWatchdog()
 
-        while watchdog.is_alive():                                                                          # REWORK
-            try:
-                r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
-            except queue.Empty:
-                continue
-            if isinstance(r, _ResumeIteration):
-                # Acknowledge the main process
-                data_queue.put((r, None))
-                iteration_end = False
-                # Recreate the fetcher for worker-reuse policy
-                fetcher = _DatasetKind.create_fetcher(                                                      # DELETE?
-                    dataset_kind,
-                    worker_id,
-                    dataset,
-                    auto_collation,
-                    collate_fn,
-                    drop_last
-                )
-                continue
-            elif r is None:
-                # Received the final signal
-                assert done_event.is_set() or iteration_end
-                break
-            elif done_event.is_set() or iteration_end:
-                # `done_event` is set. But I haven't received the final signal
-                # (None) yet. I will keep continuing until get it, and skip the
-                # processing steps.
-                continue
-            idx, index = r
-            data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
-            if init_exception is not None:
-                data = init_exception
-                init_exception = None
-            else:
+        while watchdog.is_alive() and not final_signal:                                                                          # REWORK
+
+            # Get a list of <= SUPER_BATCH_SIZE batches.
+            all_r = []
+            for _ in range(super_batch_size):
                 try:
-                    data = fetcher.fetch(index)
+                    r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+
+                    # Perform the regular checks.
+                    if isinstance(r, _ResumeIteration):
+                        # Acknowledge the main process
+                        data_queue.put((r, None))
+                        iteration_end = False
+
+                        # Re-create fetcher for worker re-use policy.
+                        fetcher = _DatasetKind.create_fetcher(
+                            dataset_kind,
+                            worker_id,
+                            dataset,
+                            auto_collation,
+                            collate_fn,
+                            drop_last
+                        )
+
+                        # Continue filling superbatch.
+                        continue
+                    elif r is None:
+                        # Received final signal. Verify conditions.
+                        assert done_event.is_set() or iteration_end
+                        final_signal = True
+                        break
+                    elif done_event.is_set() or iteration_end:
+                        # Continue to wait for the final signal.
+                        continue
+                    else:
+                        # If it wasn't a special case, append to be loaded.
+                        all_r.append(r)
+
+                except queue.Empty:
+                    pass
+            
+            all_data: List[Union[_IterableDatasetStopIteration, ExceptionWrapper]]
+
+            for idx, index in all_r:
+                try:
+                    all_data.append(fetcher.fetch(index))
                 except Exception as e:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         data = _IterableDatasetStopIteration(worker_id)
@@ -219,8 +230,16 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
                         data = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
-            data_queue.put((idx, data))
-            del data, idx, index, r  # save memory
+
+            # if init_exception is not None:
+            #     assert False
+            #     data = init_exception
+            #     init_exception = None
+
+            for data, (idx, _) in zip(all_data, all_r):
+                data_queue.put((idx, data))
+                del data, idx # save memory
+
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
