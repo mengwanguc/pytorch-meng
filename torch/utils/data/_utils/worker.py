@@ -174,7 +174,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         while watchdog.is_alive() and not final_signal:                                                                          # REWORK
 
             # Get a list of <= SUPER_BATCH_SIZE batches.
-            all_r = []
+            all_idx = [] # Indices of the batches themselves.
+            all_index = [] # Batched indices of the files to be loaded.
             for _ in range(super_batch_size):
                 try:
                     r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
@@ -207,35 +208,37 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         continue
                     else:
                         # If it wasn't a special case, append to be loaded.
-                        all_r.append(r)
+                        idx, index = r
+                        all_idx.append(idx)
+                        all_index.append(index)
 
                 except queue.Empty:
                     pass
             
-            all_data = []
-            for idx, index in all_r:
-                try:
-                    all_data.append(fetcher.fetch(index))
-                except Exception as e:
-                    if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
-                        data = _IterableDatasetStopIteration(worker_id)
-                        # Set `iteration_end`
-                        #   (1) to save future `next(...)` calls, and
-                        #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
-                        iteration_end = True
-                    else:
-                        # It is important that we don't store exc_info in a variable.
-                        # `ExceptionWrapper` does the correct thing.
-                        # See NOTE [ Python Traceback Reference Cycle Problem ]
-                        data = ExceptionWrapper(
-                            where="in DataLoader worker process {}".format(worker_id))
+            # Don't handle this yet...
+            if init_exception is not None:
+                assert False
+                data = init_exception
+                init_exception = None
 
-            # if init_exception is not None:
-            #     assert False
-            #     data = init_exception
-            #     init_exception = None
+            try:
+                all_data = fetcher.fetch(all_index)
+            except Exception as e:
+                assert False
+                # if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
+                #     data = _IterableDatasetStopIteration(worker_id)
+                #     # Set `iteration_end`
+                #     #   (1) to save future `next(...)` calls, and
+                #     #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
+                #     iteration_end = True
+                # else:
+                #     # It is important that we don't store exc_info in a variable.
+                #     # `ExceptionWrapper` does the correct thing.
+                #     # See NOTE [ Python Traceback Reference Cycle Problem ]
+                #     data = ExceptionWrapper(
+                #         where="in DataLoader worker process {}".format(worker_id))
 
-            for data, (idx, _) in zip(all_data, all_r):
+            for idx, data in zip(all_idx, all_data):
                 data_queue.put((idx, data))
                 del data, idx # save memory
 
