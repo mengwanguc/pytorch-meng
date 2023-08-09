@@ -169,7 +169,8 @@ class DataLoader(Generic[T_co]):
                  is_emulator: bool = False,
                  estimated_pin_mem_time: float = 0.0,
                  emulator_version: int = 0,
-                 balloons: dict = dict()):
+                 balloons: dict = dict(),
+                 super_batch_size: int = 1):
         torch._C._log_api_usage_once("python.data_loader")  # type: ignore
 
         if num_workers < 0:
@@ -199,6 +200,7 @@ class DataLoader(Generic[T_co]):
         self.estimated_pin_mem_time = estimated_pin_mem_time
         self.emulator_version = emulator_version
         self.balloons = balloons
+        self.super_batch_size = super_batch_size
 
         # Arg-check dataset related before checking samplers because we want to
         # tell users that iterable-style datasets are incompatible with custom
@@ -890,7 +892,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
     #     processing indices already in `index_queue` if we are already shutting
     #     down.
 
-    def __init__(self, loader, balloons):
+    def __init__(self, loader, balloons, super_batch_size):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
 
         assert self._num_workers > 0
@@ -909,7 +911,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._shutdown = False
         self._workers_done_event = multiprocessing_context.Event()
 
-
+        self._super_batch_size = super_batch_size
         self._balloons = balloons # For mlock.PyBalloon reuse in emulator.
         self._index_queues = []
         self._workers = []
