@@ -209,8 +209,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     else:
                         # If it wasn't a special case, append to be loaded.
                         idx, index = r
-                        all_idx.append(idx)
-                        all_index.append(index)
+                        if len(index) > 0:
+                            all_idx.append(idx)
+                            all_index.append(index)
 
                 except queue.Empty:
                     pass

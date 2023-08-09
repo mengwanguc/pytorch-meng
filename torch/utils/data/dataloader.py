@@ -1010,7 +1010,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     assert return_data is None
                     resume_iteration_cnt -= 1
         # prime the prefetch loop
-        for _ in range(self._prefetch_factor * self._num_workers):
+        for _ in range(max(self._prefetch_factor, self._super_batch_size) * self._num_workers):
             self._try_put_index()
 
     def _try_get_data(self, timeout=_utils.MP_STATUS_CHECK_INTERVAL):
