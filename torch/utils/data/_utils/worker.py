@@ -212,8 +212,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 except queue.Empty:
                     pass
             
-            all_data: List[Union[_IterableDatasetStopIteration, ExceptionWrapper]]
-
+            all_data = []
             for idx, index in all_r:
                 try:
                     all_data.append(fetcher.fetch(index))
