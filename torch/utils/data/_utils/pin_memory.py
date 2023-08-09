@@ -25,7 +25,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
     while not done_event.is_set():
-        if out_queue.qsize >= prefetch_factor:
+        if out_queue.qsize() >= prefetch_factor:
             continue
 
         try:
@@ -54,7 +54,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
     torch.set_num_threads(1)
 
     while not done_event.is_set():
-        if out_queue.qsize >= prefetch_factor:
+        if out_queue.qsize() >= prefetch_factor:
             continue
 
         try:
