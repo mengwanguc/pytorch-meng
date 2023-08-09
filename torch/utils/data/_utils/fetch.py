@@ -49,8 +49,6 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             if self.dataset.load_indices:
-                for i, indices in enumerate(possibly_batched_index):
-                    print("index {}: length = {}".format(i, len(indices)))
                 all_data = self.dataset.load_indices(self.async_worker, self.dataset, possibly_batched_index)
             else:
                 assert False
@@ -60,6 +58,4 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             # Async loader must be run with auto collation.
             assert False
             data = self.dataset[possibly_batched_index]
-        for i, data in enumerate(all_data):
-            print("data {}: length = {}".format(i, len(data)))
         return [self.collate_fn(data) for data in all_data]
