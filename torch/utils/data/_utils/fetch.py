@@ -58,5 +58,6 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
             # Async loader must be run with auto collation.
             assert False
             data = self.dataset[possibly_batched_index]
-        print(all_data)
+        for i, data in enumerate(all_data):
+            print("data {}: {}".format(i, data))
         return [self.collate_fn(data) for data in all_data]
