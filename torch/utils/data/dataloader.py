@@ -914,8 +914,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._workers_done_event = multiprocessing_context.Event()
 
         self._next_worker_idx = 0
-        self._worker_internal_buffers = [queue() for _ in range(self._num_workers)]
-        self._worker_output_buffers = [queue() for _ in range(self._num_workers)]
+        self._worker_internal_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
+        self._worker_output_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
 
         self._process_raw = process_raw
         self._super_batch_size = super_batch_size
