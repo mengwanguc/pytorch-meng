@@ -48,6 +48,6 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
 
     def fetch(self, possibly_batched_index):
         if self.dataset.load_indices:
-            all_data = self.dataset.load_indices(self.async_worker, self.dataset, possibly_batched_index)
+            return self.dataset.load_indices(self.async_worker, self.dataset, possibly_batched_index)
         else:
             assert False
