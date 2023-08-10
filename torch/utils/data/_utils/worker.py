@@ -182,8 +182,10 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 if output_buffer.qsize() == 0 and internal_buffer.qsize() > 0:
                     # Take an item from the internal buffer, process it, and put
                     # it into the output buffer.
-                    idx, (target, raw_data) = internal_buffer.get()
-                    processed = process_raw(dataset, raw_data, target)
+                    idx, buffered = internal_buffer.get()
+                    processed = []
+                    for target, raw_data in buffered:
+                        processed.append(process_raw(dataset, raw_data, target))
                     output_buffer.put((idx, collate_fn(processed)))
                     continue
                 elif output_buffer.qsize() > 0:
