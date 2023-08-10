@@ -68,6 +68,9 @@ class WorkerInfo(object):
         self.__keys = tuple(kwargs.keys())
         self.__initialized = True
 
+        self.internal_buffer = queue()
+        self.output_buffer = queue()
+
     def __setattr__(self, key, val):
         if self.__initialized:
             raise RuntimeError("Cannot assign attributes to {} objects".format(self.__class__.__name__))
@@ -121,7 +124,7 @@ class _ResumeIteration(object):
 
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers, super_batch_size):
+                 num_workers, persistent_workers, super_batch_size, process_raw):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -177,6 +180,21 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             all_idx = [] # Indices of the batches themselves.
             all_index = [] # Batched indices of the files to be loaded.
             for _ in range(super_batch_size):
+                # Always keep 1 processed data ready to go in the output buffer.
+                if _worker_info.output_buffer.qsize() == 0 and _worker_info.internal_buffer.qsize() > 0:
+                    # Take an item from the internal buffer, process it, and put
+                    # it into the output buffer.
+                    idx, (target, raw_data) = _worker_info.internal_buffer.get()
+                    processed = process_raw(dataset, raw_data, target)
+                    _worker_info.output_buffer.put((idx, collate_fn(processed)))
+                    continue
+                elif _worker_info.output_buffer.qsize() > 0:
+                    continue
+                
+                # In the case where we cannot replenish the output buffer due to
+                # the internal buffer being empty, we need to re-fill the internal
+                # buffer by loading additional data.
+
                 try:
                     r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
 
@@ -212,40 +230,23 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         if len(index) > 0:
                             all_idx.append(idx)
                             all_index.append(index)
-
                 except queue.Empty:
                     pass
             
             # Don't handle this yet...
             if init_exception is not None:
                 assert False
-                data = init_exception
-                init_exception = None
 
-            try:
-                all_data = fetcher.fetch(all_index)
-            except Exception as e:
-                assert False
-                # if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
-                #     data = _IterableDatasetStopIteration(worker_id)
-                #     # Set `iteration_end`
-                #     #   (1) to save future `next(...)` calls, and
-                #     #   (2) to avoid sending multiple `_IterableDatasetStopIteration`s.
-                #     iteration_end = True
-                # else:
-                #     # It is important that we don't store exc_info in a variable.
-                #     # `ExceptionWrapper` does the correct thing.
-                #     # See NOTE [ Python Traceback Reference Cycle Problem ]
-                #     data = ExceptionWrapper(
-                #         where="in DataLoader worker process {}".format(worker_id))
-
-            for idx, data in zip(all_idx, all_data):
-                data_queue.put((idx, data))
-                del data, idx # save memory
+            # In the form of List[Tuple(target, data)]
+            all_unprocessed_data = fetcher.fetch(all_index)
+            for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
+                # Tuple(idx, Tuple(target, data))
+                persistent_workers[worker_id].data_buffer.put((idx, unprocessed_data))
 
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
+
     if done_event.is_set():
         data_queue.cancel_join_thread()
         data_queue.close()

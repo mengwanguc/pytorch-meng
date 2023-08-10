@@ -157,7 +157,8 @@ class DataLoader(Generic[T_co]):
     _iterator : Optional['_BaseDataLoaderIter']
     __initialized = False
 
-    def __init__(self, dataset: Dataset[T_co], batch_size: Optional[int] = 1,
+    def __init__(self, dataset: Dataset[T_co], process_raw: Callable,
+                 batch_size: Optional[int] = 1,
                  shuffle: bool = False, sampler: Optional[Sampler[int]] = None,
                  batch_sampler: Optional[Sampler[Sequence[int]]] = None,
                  num_workers: int = 0, collate_fn: _collate_fn_t = None,
@@ -201,6 +202,7 @@ class DataLoader(Generic[T_co]):
         self.emulator_version = emulator_version
         self.balloons = balloons
         self.super_batch_size = super_batch_size
+        self.process_raw = process_raw
 
         # Arg-check dataset related before checking samplers because we want to
         # tell users that iterable-style datasets are incompatible with custom
@@ -311,7 +313,7 @@ class DataLoader(Generic[T_co]):
             return _SingleProcessDataLoaderIter(self)
         else:
             self.check_worker_number_rationality()
-            return _MultiProcessingDataLoaderIter(self, self.balloons, self.super_batch_size)
+            return _MultiProcessingDataLoaderIter(self, self.balloons, self.super_batch_size, self.process_raw)
 
     @property
     def multiprocessing_context(self):
@@ -892,7 +894,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
     #     processing indices already in `index_queue` if we are already shutting
     #     down.
 
-    def __init__(self, loader, balloons, super_batch_size):
+    def __init__(self, loader, balloons, super_batch_size, process_raw):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
 
         assert self._num_workers > 0
@@ -911,6 +913,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._shutdown = False
         self._workers_done_event = multiprocessing_context.Event()
 
+        self._next_worker_idx = 0
+
+        self._process_raw = process_raw
         self._super_batch_size = super_batch_size
         self._balloons = balloons # For mlock.PyBalloon reuse in emulator.
         self._index_queues = []
@@ -927,7 +932,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._worker_result_queue, self._workers_done_event,
                       self._auto_collation, self._collate_fn, self._drop_last,
                       self._base_seed + i, self._worker_init_fn, i, self._num_workers,
-                      self._persistent_workers, self._super_batch_size))
+                      self._persistent_workers, self._super_batch_size, self._process_raw))
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.
@@ -1014,9 +1019,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             self._try_put_index()
 
     def _try_get_data(self, timeout=_utils.MP_STATUS_CHECK_INTERVAL):
-        # Tries to fetch data from `self._data_queue` once for a given timeout.
-        # This can also be used as inner loop of fetching without timeout, with
-        # the sender status as the loop condition.
+        # Tries to fetch data from `self._data_queue` once for a given timeout.     <- OUTDATED
+        # This can also be used as inner loop of fetching without timeout, with     <- OUTDATED
+        # the sender status as the loop condition.                                  <- OUTDATED
         #
         # This raises a `RuntimeError` if any worker died expectedly. This error
         # can come from either the SIGCHLD handler in `_utils/signal_handling.py`
@@ -1026,7 +1031,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # Returns a 2-tuple:
         #   (bool: whether successfully get data, any: data if successful else None)
         try:
-            data = self._data_queue.get(timeout=timeout)
+            # Get data round-robin style from each worker's output queue.
+            data = self._workers[self._next_worker_idx].output_buffer.get(timeout=timeout)
+            self._next_worker_idx = (self._next_worker_idx + 1) % self._num_workers
             return (True, data)
         except Exception as e:
             # At timeout and error, we manually check whether any worker has
