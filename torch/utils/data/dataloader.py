@@ -914,6 +914,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._workers_done_event = multiprocessing_context.Event()
 
         self._next_worker_idx = 0
+        self._worker_internal_buffers = [queue() for _ in range(self._num_workers)]
+        self._worker_output_buffers = [queue() for _ in range(self._num_workers)]
 
         self._process_raw = process_raw
         self._super_batch_size = super_batch_size
@@ -932,7 +934,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._worker_result_queue, self._workers_done_event,
                       self._auto_collation, self._collate_fn, self._drop_last,
                       self._base_seed + i, self._worker_init_fn, i, self._num_workers,
-                      self._persistent_workers, self._super_batch_size, self._process_raw))
+                      self._persistent_workers, self._super_batch_size, self._process_raw,
+                      self._worker_internal_buffers[i], self._worker_output_buffers[i]))
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.
@@ -1032,7 +1035,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         #   (bool: whether successfully get data, any: data if successful else None)
         try:
             # Get data round-robin style from each worker's output queue.
-            data = self._workers[self._next_worker_idx].output_buffer.get(timeout=timeout)
+            data = self._worker_output_buffers[self._next_worker_idx].get(timeout=timeout)
             self._next_worker_idx = (self._next_worker_idx + 1) % self._num_workers
             return (True, data)
         except Exception as e:

@@ -68,9 +68,6 @@ class WorkerInfo(object):
         self.__keys = tuple(kwargs.keys())
         self.__initialized = True
 
-        self.internal_buffer = queue()
-        self.output_buffer = queue()
-
     def __setattr__(self, key, val):
         if self.__initialized:
             raise RuntimeError("Cannot assign attributes to {} objects".format(self.__class__.__name__))
@@ -124,7 +121,8 @@ class _ResumeIteration(object):
 
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers, super_batch_size, process_raw):
+                 num_workers, persistent_workers, super_batch_size, process_raw,
+                 internal_buffer, output_buffer):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -181,14 +179,14 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             all_index = [] # Batched indices of the files to be loaded.
             for _ in range(super_batch_size):
                 # Always keep 1 processed data ready to go in the output buffer.
-                if _worker_info.output_buffer.qsize() == 0 and _worker_info.internal_buffer.qsize() > 0:
+                if output_buffer.qsize() == 0 and internal_buffer.qsize() > 0:
                     # Take an item from the internal buffer, process it, and put
                     # it into the output buffer.
-                    idx, (target, raw_data) = _worker_info.internal_buffer.get()
+                    idx, (target, raw_data) = internal_buffer.get()
                     processed = process_raw(dataset, raw_data, target)
-                    _worker_info.output_buffer.put((idx, collate_fn(processed)))
+                    output_buffer.put((idx, collate_fn(processed)))
                     continue
-                elif _worker_info.output_buffer.qsize() > 0:
+                elif output_buffer.qsize() > 0:
                     continue
                 
                 # In the case where we cannot replenish the output buffer due to
@@ -241,7 +239,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             all_unprocessed_data = fetcher.fetch(all_index)
             for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                 # Tuple(idx, Tuple(target, data))
-                persistent_workers[worker_id].data_buffer.put((idx, unprocessed_data))
+                internal_buffer.put((idx, unprocessed_data))
 
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
