@@ -247,6 +247,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             if init_exception is not None:
                 assert False
 
+            if not all_index:
+                continue
+            
             # In the form of List[Tuple(target, data)]
             data_fetch_start = time.time()
             all_unprocessed_data = fetcher.fetch(all_index)
@@ -263,7 +266,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
     timing_lock.acquire()
     for key in timing:
         for val in timing[key]:
-            timing_file.write("{},{},{},{}".format(
+            timing_file.write("{},{},{},{}\n".format(
                 worker_id,
                 key,    # label
                 val[0], # time
