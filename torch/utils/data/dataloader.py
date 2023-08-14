@@ -917,6 +917,11 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._worker_internal_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
         self._worker_output_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
 
+        # Profiling data
+        self._timing_file = open("./p100/pytorch_timing", "w+")
+        self._timing_file.write("worker_id,time_id,time,duration")
+        self._timing_file_lock = multiprocessing.Lock()
+
         self._process_raw = process_raw
         self._super_batch_size = super_batch_size
         self._balloons = balloons # For mlock.PyBalloon reuse in emulator.
@@ -935,7 +940,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._auto_collation, self._collate_fn, self._drop_last,
                       self._base_seed + i, self._worker_init_fn, i, self._num_workers,
                       self._persistent_workers, self._super_batch_size, self._process_raw,
-                      self._worker_internal_buffers[i], self._worker_output_buffers[i]))
+                      self._worker_internal_buffers[i], self._worker_output_buffers[i],
+                      self._timing_file, self._timing_file_lock))
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.

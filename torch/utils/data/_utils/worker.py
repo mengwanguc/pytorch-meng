@@ -7,6 +7,7 @@ static methods.
 import torch
 import random
 import os
+import time
 from dataclasses import dataclass
 from torch._six import queue
 from torch._utils import ExceptionWrapper
@@ -122,7 +123,7 @@ class _ResumeIteration(object):
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
                  num_workers, persistent_workers, super_batch_size, process_raw,
-                 internal_buffer, output_buffer):
+                 internal_buffer, output_buffer, timing_file, timing_lock):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -172,6 +173,11 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
         watchdog = ManagerWatchdog()
 
+        timing = {
+            'data_fetch':[],
+            'internal_to_output':[],
+        }
+
         while watchdog.is_alive() and not final_signal:                                                                          # REWORK
 
             # Get a list of <= SUPER_BATCH_SIZE batches.
@@ -182,9 +188,15 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 if output_buffer.qsize() == 0 and internal_buffer.qsize() > 0:
                     # Take an item from the internal buffer, process it, and put
                     # it into the output buffer.
+
+                    internal_to_output_start = time.time()
+
                     idx, buffered = internal_buffer.get()
                     processed = [process_raw(dataset, raw_data, target) for target, raw_data in buffered]
                     output_buffer.put((idx, collate_fn(processed)))
+
+                    timing['internal_to_output'].append((internal_to_output_start, time.time() - internal_to_output_start))
+
                     continue
                 elif output_buffer.qsize() > 0:
                     continue
@@ -236,7 +248,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 assert False
 
             # In the form of List[Tuple(target, data)]
+            data_fetch_start = time.time()
             all_unprocessed_data = fetcher.fetch(all_index)
+            timing['data_fetch'].append((data_fetch_start, time.time() - data_fetch_start))
             for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                 # Tuple(idx, Tuple(target, data))
                 internal_buffer.put((idx, unprocessed_data))
@@ -244,6 +258,19 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
+
+    # Write output to our file
+    timing_lock.acquire()
+    for key in timing:
+        for val in timing[key]:
+            timing_file.write("{},{},{},{}".format(
+                worker_id,
+                key,    # label
+                val[0], # time
+                val[1]  # duration
+            ))
+    timing_file.close()
+    timing_lock.release()
 
     if done_event.is_set():
         data_queue.cancel_join_thread()
