@@ -919,7 +919,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         # Profiling data
         self._timing_file = open("pytorch_timing.csv", "w+")
-        self._timing_file.write("worker_id,time_id,time,duration")
+        self._timing_file.write("worker_id,time_id,time,duration\n")
         self._timing_file_lock = multiprocessing.Lock()
 
         self._process_raw = process_raw
