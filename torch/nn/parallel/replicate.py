@@ -76,10 +76,14 @@ def _broadcast_coalesced_reshape(tensors, devices, detach=False):
 
 
 def replicate(network, devices, detach=False):
+    print("I got into replicate.py in parallel directory. ")
+    # network IS the module. 
+
+    # check if it's replicable. 
     if not _replicatable_module(network):
         raise RuntimeError("Cannot replicate network where python modules are "
                            "childrens of ScriptModule")
-
+    # check if there are devices. 
     if not devices:
         return []
 
@@ -112,6 +116,7 @@ def replicate(network, devices, detach=False):
     for i, module in enumerate(modules):
         module_indices[module] = i
         for j in range(num_replicas):
+            # _replicate_for_data_parallel is in module.py in modules. 
             replica = module._replicate_for_data_parallel()
             # This is a temporary fix for DDP. DDP needs to access the
             # replicated model parameters. It used to do so through

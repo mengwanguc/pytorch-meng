@@ -21,6 +21,9 @@ from ..overrides import has_torch_function, handle_torch_function
 from . import functional
 from . import forward_ad
 
+# Haoran Wu
+import time
+
 __all__ = ['Variable', 'Function', 'backward', 'grad_mode']
 
 _OptionalTensor = Optional[torch.Tensor]
@@ -123,6 +126,7 @@ def backward(
             used to compute the attr::tensors. All the provided inputs must be leaf
             Tensors.
     """
+    print("I got into /home/cc/pytorch-meng/torch/autograd/__init__.py")
     if grad_variables is not None:
         warnings.warn("'grad_variables' is deprecated. Use 'grad_tensors' instead.")
         if grad_tensors is None:
@@ -142,10 +146,20 @@ def backward(
     if retain_graph is None:
         retain_graph = create_graph
 
-    Variable._execution_engine.run_backward(
-        tensors, grad_tensors_, retain_graph, create_graph, inputs,
-        allow_unreachable=True, accumulate_grad=True)  # allow_unreachable flag
+    # check time measurement in C++ code
+    torch.cuda.synchronize()
+    time_bef_exe=time.time()
+    torch.cuda.synchronize()
+    print("Before Variable._execution_engine.run_backward. ")
 
+    Variable._execution_engine.run_backward(tensors, grad_tensors_, retain_graph, create_graph, inputs,allow_unreachable=True, accumulate_grad=True)  # allow_unreachable flag
+    time_right_after_exe=time.time()
+    print("The time spent right after Variable._execution_engine.run_backward is: {}".format(time_right_after_exe-time_bef_exe))
+    torch.cuda.synchronize()
+    time_aft_exe=time.time()
+    torch.cuda.synchronize()
+    print("After Variable._execution_engine.run_backward. ")
+    print("The time spent in Variable._execution_engine.run_backward is: {}".format(time_aft_exe-time_bef_exe))
 
 def grad(
     outputs: _TensorOrTensors,
@@ -193,6 +207,7 @@ def grad(
             used when computing outputs (and therefore their grad is always zero)
             is an error. Defaults to ``False``.
     """
+    print("I got into /home/cc/pytorch-meng/torch/autograd/__init__.py.")
     outputs = (outputs,) if isinstance(outputs, torch.Tensor) else tuple(outputs)
     inputs = (inputs,) if isinstance(inputs, torch.Tensor) else tuple(inputs)
     overridable_args = outputs + inputs

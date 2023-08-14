@@ -5,6 +5,9 @@ from torch._utils import _take_tensors, _flatten_dense_tensors, \
     _unflatten_dense_tensors, _reorder_tensors_as, _get_device_index, _handle_complex
 from typing import List
 
+import time
+import inspect
+
 def broadcast(tensor, devices=None, *, out=None):
     r"""Broadcasts a tensor to specified GPU devices.
 
@@ -183,10 +186,32 @@ def scatter(tensor, devices=None, chunk_sizes=None, dim=0, streams=None, *, out=
             a tuple containing :attr:`out` tensors, each containing a chunk of
             :attr:`tensor`.
     """
+    # comm.scatter(input, target_gpus, chunk_sizes, ctx.dim, streams)
+    # to put inputs onto GPU: images = images.cuda(args.gpu, non_blocking=False)
+    # len(tensor)=256
+    
     tensor = _handle_complex(tensor)
+    print("The length of tensor is: {}.".format(tensor.size()))
     if out is None:
         devices = [_get_device_index(d) for d in devices]
-        return tuple(torch._C._scatter(tensor, devices, chunk_sizes, dim, streams))
+        print("out is None. So I'm here. the devices are: {}".format(devices))
+        # out is None. So I'm here. the devices are: [0, 1]
+        # line below is super important. 
+        # measure the time below. 
+        # print dim, if images->dim=4, target->dim<4
+        
+        torch.cuda.synchronize()
+        time_bef_C_scatter=time.time()
+        torch.cuda.synchronize()
+        
+        temp = tuple(torch._C._scatter(tensor, devices, chunk_sizes, dim, streams))
+        
+        torch.cuda.synchronize()
+        time_aft_C_scatter=time.time()
+        torch.cuda.synchronize()
+        time_ins_C_scatter = time_aft_C_scatter-time_bef_C_scatter
+        print("The time spent in _C_scatter is: {}".format(time_ins_C_scatter))
+        return temp
     else:
         if devices is not None:
             raise RuntimeError(
@@ -232,6 +257,9 @@ def gather(tensors, dim=0, destination=None, *, out=None):
                 'Using -1 to represent CPU tensor is deprecated. Please use a '
                 'device object or string instead, e.g., "cpu".')
         destination = _get_device_index(destination, allow_cpu=True, optional=True)
+        print("Similar to scatter, gather also takes the inputs to /home/cc/pytorch-meng/torch/nn/parallel/comm.py")
+        print("It then leverages on using ._C._gather. ")
+        # Who I'm calling
         return torch._C._gather(tensors, dim, destination)
     else:
         if destination is not None:

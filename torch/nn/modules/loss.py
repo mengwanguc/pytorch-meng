@@ -1044,6 +1044,7 @@ class CrossEntropyLoss(_WeightedLoss):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert self.weight is None or isinstance(self.weight, Tensor)
+        # self.weight is the result we want to get out. 
         return F.cross_entropy(input, target, weight=self.weight,
                                ignore_index=self.ignore_index, reduction=self.reduction)
 

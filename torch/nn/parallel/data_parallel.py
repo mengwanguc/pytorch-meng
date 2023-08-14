@@ -12,7 +12,7 @@ from torch._utils import (
     _get_device_index,
     _get_devices_properties
 )
-
+import time
 def _check_balance(device_ids):
     imbalance_warn = """
     There is an imbalance between your GPUs. You may want to exclude GPU {} which
@@ -146,32 +146,108 @@ class DataParallel(Module):
             self.module.to(self.src_device_obj)
 
     def forward(self, *inputs, **kwargs):
+        print("I got into forward funciton of DataParallel! ! !, the ids are {}".format(self.device_ids))
+        print("Note that the images are not divided here yet. ")
+        print("The length of inputs is {}, and the length of kwargs is {}".format(len(inputs),len(kwargs)))
+        print("Check if the image is on CUDA: {}".format(inputs[0].is_cuda))
+        # print("This is inputs: {}".format(inputs))
+        # if there is no devices. 
         if not self.device_ids:
             return self.module(*inputs, **kwargs)
 
+        # used to rise an error
         for t in chain(self.module.parameters(), self.module.buffers()):
             if t.device != self.src_device_obj:
                 raise RuntimeError("module must have its parameters and buffers "
                                    "on device {} (device_ids[0]) but found one of "
                                    "them on device: {}".format(self.src_device_obj, t.device))
 
+        torch.cuda.synchronize()
+        time_bef_scat=time.time()
+        torch.cuda.synchronize()
+
         inputs, kwargs = self.scatter(inputs, kwargs, self.device_ids)
+
+        torch.cuda.synchronize()
+        time_aft_scat=time.time()
+        torch.cuda.synchronize()
+        time_ins_scat=time_aft_scat-time_bef_scat
+        print("The total time spent on scatter is: {}".format(time_ins_scat))
         # for forward function without any inputs, empty list and dict will be created
         # so the module can be executed on one device which is the first one in device_ids
         if not inputs and not kwargs:
+            print("This is when both inputs and kwargs are None")
             inputs = ((),)
             kwargs = ({},)
+        # once got here, neither inputs nor kwargs are none
+        print("After scatter")
+        print("The length of inputs is {}, and the length of kwargs is {}".format(len(inputs),len(kwargs)))
 
+        print("Two inputs, the first one is in CUDA: {}".format(inputs[0][0].is_cuda))
+        print("Two inputs, the second one is in CUDA: {}".format(inputs[1][0].is_cuda))
+        # print below shows that kwargs is empty, even though it's length is 2. 
+        # print("After scatter, this is kwargs: {}".format(kwargs))
+        # if there is only 1 device, then just treat it like there is only 1. 
         if len(self.device_ids) == 1:
+            # 1 GPU doesn't come here. 
             return self.module(*inputs[0], **kwargs[0])
+        
+        # the following case if when there are two devices
+        print("If I have 2 devices I come here. I want to know the time of the following. ")
+        torch.cuda.synchronize()
+        time_bef_rep=time.time()
+        torch.cuda.synchronize()
+
+        # self.module is the Resnet architecture. 
+        # It shows self.device_ids[:len(inputs)] = [0, 1]
+
+        # It seems to me that resnet model cannot just be copied by .copy(), so PyTorch
+        # had to enumerate through self.module. At the end, they give the same # of replicas 
+        # as the length of the # of devices. 
         replicas = self.replicate(self.module, self.device_ids[:len(inputs)])
+        # The len of replicas is 2
+        # self.module==replica[0]==replica[1]
+        # two replicas are not the same. 
+        # self.module's text is the same as replicas[0] and replicas[1] by using text comparator. 
+        # every time the model's update is put together, then we use th eupdated module to send to GPUs. 
+        torch.cuda.synchronize()
+        time_bef_par=time.time()
+        torch.cuda.synchronize()
+        print("The time took for replicate is: {}".format(time_bef_par-time_bef_rep))
+
+        print("len of inputs: {}, kwargs are: {}".format(len(inputs), kwargs))
+        # kwargs is empty
+        # given 2 modules' replica and two inputs to assign 2 threads to each GPU. 
         outputs = self.parallel_apply(replicas, inputs, kwargs)
-        return self.gather(outputs, self.output_device)
+        # len(outputs) = 2
+        # check out what are the outputs, what are they? 
+
+        torch.cuda.synchronize()
+        time_bef_gat=time.time()
+        torch.cuda.synchronize()
+        print("The time took for parallel_apply is: {}".format(time_bef_gat-time_bef_par))
+
+        # what does gather do: take tensors from different GPUs onto a specified device. 
+        # Not sure which device yet. Notice that outputs is plural. 2 outputs. 
+        # The self.output_device is: 0
+        # The shape of the outputs is: [0]: torch.Size([128, 1000]), [1]: torch.Size([128, 1000])
+        print(outputs)
+        temp = self.gather(outputs, self.output_device)
+        # print("The output of gather is: {}".format(temp))
+        # output is on the first GPU. 
+        torch.cuda.synchronize()
+        time_aft_gat=time.time()
+        torch.cuda.synchronize()
+        print("The time took for gather is: {}".format(time_aft_gat-time_bef_gat))
+    
+        print("The time took extra here for 2 GPUs is: {}".format(time_aft_gat-time_bef_rep))
+        return temp
 
     def replicate(self, module, device_ids):
         return replicate(module, device_ids, not torch.is_grad_enabled())
 
     def scatter(self, inputs, kwargs, device_ids):
+        print("I got into function scatter in data_parallel.py. ")
         return scatter_kwargs(inputs, kwargs, device_ids, dim=self.dim)
 
     def parallel_apply(self, replicas, inputs, kwargs):
@@ -196,6 +272,8 @@ def data_parallel(module, inputs, device_ids=None, output_device=None, dim=0, mo
         a Tensor containing the result of module(input) located on
         output_device
     """
+    # print("Wonder if it gets here: data_parallel. ")
+    # No it did not come here. 
     if not isinstance(inputs, tuple):
         inputs = (inputs,) if inputs is not None else ()
 

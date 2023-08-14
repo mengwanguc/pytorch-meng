@@ -6,6 +6,8 @@ from torch.autograd import Function
 from torch._utils import _get_device_index
 from typing import List, Optional
 
+import traceback
+import inspect
 
 class Broadcast(Function):
 
@@ -31,6 +33,7 @@ class Broadcast(Function):
 
     @staticmethod
     def backward(ctx, *grad_outputs):
+        print("I got into @staticmethod backward() in /home/cc/anaconda3/lib/python3.9/site-packages/torch/nn/parallel/_functions.py")
         return (None,) + ReduceAddCoalesced.apply(ctx.input_device, ctx.num_inputs, *grad_outputs)
 
 
@@ -38,6 +41,7 @@ class ReduceAddCoalesced(Function):
 
     @staticmethod
     def forward(ctx, destination, num_inputs, *grads):
+        print("I got into forward() in ReduceAddCoalesced()")
         ctx.target_gpus = [grads[i].get_device() for i in range(0, len(grads), num_inputs)]
 
         grads_ = [grads[i:i + num_inputs]
@@ -73,6 +77,14 @@ class Gather(Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        # got called in here for the second call. 
+        
+        print("-- call stack of Function forward in backward in: /home/cc/pytorch-meng/torch/nn/parallel/_functions.py")
+        for line in traceback.format_stack():
+            print(line.strip())
+        print("---\n")
+        print("in /home/cc/pytorch-meng/torch/nn/parallel/_functions.py, the grad_output's shape is: {}".format(grad_output.size()))
+        # goes to the function right below
         scattered_grads = Scatter.apply(ctx.input_gpus, ctx.input_sizes, ctx.dim, grad_output)
         if ctx.unsqueezed_scalar:
             scattered_grads = tuple(g[0] for g in scattered_grads)
@@ -83,14 +95,25 @@ class Scatter(Function):
 
     @staticmethod
     def forward(ctx, target_gpus, chunk_sizes, dim, input):
+        # Scatter.apply(target_gpus, None, dim, obj)
+        # to put inputs onto GPU: images = images.cuda(args.gpu, non_blocking=False)
+        
+        # check out the stack and see which funtions called here. 
+
+        print("Got into _functions.py Scatter's forward")
         target_gpus = [_get_device_index(x, True) for x in target_gpus]
         ctx.dim = dim
         ctx.input_device = input.get_device() if input.device.type != "cpu" else -1
         streams = None
+        # checking if cuda is available. 
         if torch.cuda.is_available() and ctx.input_device == -1:
             # Perform CPU to GPU copies in a background stream
             streams = [_get_stream(device) for device in target_gpus]
+            # print("This is streams: ",streams)
         outputs = comm.scatter(input, target_gpus, chunk_sizes, ctx.dim, streams)
+        # print("The length of the outputs is: {}".format(len(outputs)))
+        # The length is 2. Both are True on CUDA, so comm.scatter is where input got into GPU
+        # print("The outputs are on CUDA: {}, {}".format(outputs[0][0].is_cuda,outputs[1][0].is_cuda))
         # Synchronize with the copy stream
         if streams is not None:
             for i, output in enumerate(outputs):
@@ -102,6 +125,7 @@ class Scatter(Function):
 
     @staticmethod
     def backward(ctx, *grad_output):
+        print("I'm in /home/cc/pytorch-meng/torch/nn/parallel/_functions.py's backward()")
         return None, None, None, Gather.apply(ctx.input_device, ctx.dim, *grad_output)
 
 

@@ -34,6 +34,9 @@
 #include <queue>
 #include <TH/TH.h>
 
+#include <sys/time.h>
+using namespace std;
+
 namespace torch { namespace autograd {
 
 namespace {
@@ -845,10 +848,32 @@ auto Engine::execute(const edge_list& roots,
                      bool create_graph,
                      bool accumulate_grad,
                      const edge_list& outputs) -> variable_list {
+  std::cout<<"Got into execute() in /home/cc/pytorch-meng/torch/csrc/autograd/engine.cpp\n";
+
+  // It is in both. 
+  struct timeval start, end, c1, c2, c3, a1, a2, a3, a4, a5;
+  // start timer.
+  gettimeofday(&start, NULL);
+  // unsync the I/O of C and C++.
+  ios_base::sync_with_stdio(false);
+
+  // It is in both
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   validate_outputs(roots, const_cast<variable_list&>(inputs), [](const std::string& msg) {
     return msg;
   });
+
+  // stop timer.
+  gettimeofday(&end, NULL);
+  // unsync the I/O of C and C++.
+  ios_base::sync_with_stdio(false);
+  // Calculating total time taken by the program.
+  double time_taken;
+  time_taken = (end.tv_sec - start.tv_sec) * 1e6;
+  time_taken = (time_taken + (end.tv_usec -
+                            start.tv_usec)) * 1e-6;
+  cout << "Time taken by sec1 is : " << fixed
+        << time_taken<<"\n";
 
   // A frech first time Engine::execute call should start on the CPU device, initialize
   // a new thread local ready queue on CPU or reuse the existing one (if there is one
@@ -872,31 +897,144 @@ auto Engine::execute(const edge_list& roots,
   // Now compute the dependencies for all executable functions and queue the root
   compute_dependencies(graph_root.get(), *graph_task);
 
+  // stop timer.
+  gettimeofday(&c1, NULL);
+  // unsync the I/O of C and C++.
+  ios_base::sync_with_stdio(false);
+  // Calculating total time taken by the program.
+  double time_taken1;
+  time_taken1 = (c1.tv_sec - end.tv_sec) * 1e6;
+  time_taken1 = (time_taken1 + (c1.tv_usec -
+                            end.tv_usec)) * 1e-6;
+  cout << "Time taken by sec2 is : " << fixed
+        << time_taken1<<"\n";
+
   if (!outputs.empty()) {
+    cout<<"!outputs.empty()\n";
+    // neither goes into here
     graph_task->init_to_execute(*graph_root, outputs, accumulate_grad);
   }
 
   if (skip_dummy_node) {
+    cout<<"skip_dummy_node\n";
+    // both come in here. 
+    /*
+    const edge_list& roots,
+    const variable_list& inputs,
+    bool keep_graph,
+    bool create_graph,
+    bool accumulate_grad,
+    const edge_list& outputs
+    */
+    // start timer.
+    gettimeofday(&a1, NULL);
+    // unsync the I/O of C and C++.
+    ios_base::sync_with_stdio(false);
+
     InputBuffer input_buffer(roots.at(0).function->num_inputs());
     auto input = inputs.at(0);
+    std::cout<<"The input in engine is: "<<input<<"\n";
+
+    // stop timer.
+    gettimeofday(&a2, NULL);
+    // unsync the I/O of C and C++.
+    ios_base::sync_with_stdio(false);
+    // Calculating total time taken by the program.
+    double time_taken_in1;
+    time_taken_in1 = (a2.tv_sec - a1.tv_sec) * 1e6;
+    time_taken_in1 = (time_taken_in1 + (a2.tv_usec -
+                              a1.tv_usec)) * 1e-6;
+    cout << "Time taken by InputBuffer+inputs.at(0) is : " << fixed
+          << time_taken_in1<<"\n";
 
     const auto input_stream = InputMetadata(input).stream();
     const auto opt_next_stream = roots.at(0).function->stream(c10::DeviceType::CUDA);
+
+    // stop timer.
+    gettimeofday(&a3, NULL);
+    // unsync the I/O of C and C++.
+    ios_base::sync_with_stdio(false);
+    // Calculating total time taken by the program.
+    double time_taken_in2;
+    time_taken_in2 = (a3.tv_sec - a2.tv_sec) * 1e6;
+    time_taken_in2 = (time_taken_in2 + (a3.tv_usec -
+                              a2.tv_usec)) * 1e-6;
+    cout << "Time taken by two streams is : " << fixed
+          << time_taken_in2<<"\n";
+
     input_buffer.add(roots.at(0).input_nr,
                       std::move(input),
                       input_stream,
                       opt_next_stream);
+    // keep digging in, looking for A and apply. 
 
+    // stop timer.
+    gettimeofday(&a4, NULL);
+    // unsync the I/O of C and C++.
+    ios_base::sync_with_stdio(false);
+    // Calculating total time taken by the program.
+    double time_taken_in3;
+    time_taken_in3 = (a4.tv_sec - a3.tv_sec) * 1e6;
+    time_taken_in3 = (time_taken_in3 + (a4.tv_usec -
+                              a3.tv_usec)) * 1e-6;
+    cout << "Time taken by input_buffer.add is : " << fixed
+          << time_taken_in3<<"\n";
+
+    // This is the most important line
     execute_with_graph_task(graph_task, graph_root, std::move(input_buffer));
+
+    // stop timer.
+    gettimeofday(&a5, NULL);
+    // unsync the I/O of C and C++.
+    ios_base::sync_with_stdio(false);
+    // Calculating total time taken by the program.
+    double time_taken_in4;
+    time_taken_in4 = (a5.tv_sec - a4.tv_sec) * 1e6;
+    time_taken_in4 = (time_taken_in4 + (a5.tv_usec -
+                              a4.tv_usec)) * 1e-6;
+    cout << "Time taken by execute_with_graph_task is : " << fixed
+          << time_taken_in4<<"\n";
   } else {
+    cout<<"!skip_dummy_node\n";
+    // neither goes in here
     execute_with_graph_task(graph_task, graph_root, InputBuffer(variable_list()));
   }
+
+  // stop timer.
+  gettimeofday(&c2, NULL);
+  // unsync the I/O of C and C++.
+  ios_base::sync_with_stdio(false);
+  // Calculating total time taken by the program.
+  double time_taken2;
+  time_taken2 = (c2.tv_sec - c1.tv_sec) * 1e6;
+  time_taken2 = (time_taken2 + (c2.tv_usec -
+                            c1.tv_usec)) * 1e-6;
+  cout << "Time taken by sec3 is : " << fixed
+        << time_taken2<<"\n";
+
   // Avoid a refcount bump for the Future, since we check for refcount in
   // DistEngine (see TORCH_INTERNAL_ASSERT(futureGrads.use_count() == 1)
   // in dist_engine.cpp).
   auto& fut = graph_task->future_result_;
   fut->wait();
-  return fut->value().toTensorVector();
+  std::cout<<"Got before fut->value().toTensorVector()\n";
+  // It is in both
+  // Seems just turn vector into tensor
+  auto temp = fut->value().toTensorVector();
+
+  // stop timer.
+  gettimeofday(&c3, NULL);
+  // unsync the I/O of C and C++.
+  ios_base::sync_with_stdio(false);
+  // Calculating total time taken by the program.
+  double time_taken3;
+  time_taken3 = (c3.tv_sec - c2.tv_sec) * 1e6;
+  time_taken3 = (time_taken3 + (c3.tv_usec -
+                            c2.tv_usec)) * 1e-6;
+  cout << "Time taken by sec4 is : " << fixed
+        << time_taken3<<"\n";
+
+  return temp;
 }
 
 void Engine::initialize_device_threads_pool() {
@@ -911,11 +1049,45 @@ std::shared_ptr<at::ivalue::Future> Engine::execute_with_graph_task(
     const std::shared_ptr<GraphTask>& graph_task,
     std::shared_ptr<Node> graph_root,
     InputBuffer&& input_buffer) {
+  std::cout<<"I'm in execute_with_graph_task in engine.cpp. \n";
+
+  struct timeval a1, a2, a3, a4, a5, a6;
+
+   // start timer.
+  gettimeofday(&a1, NULL);
+  // unsync the I/O of C and C++.
+  ios_base::sync_with_stdio(false);
+
   initialize_device_threads_pool();
+
+  // stop timer.
+  gettimeofday(&a2, NULL);
+  // unsync the I/O of C and C++.
+  ios_base::sync_with_stdio(false);
+  // Calculating total time taken by the program.
+  double time_taken1;
+  time_taken1 = (a2.tv_sec - a1.tv_sec) * 1e6;
+  time_taken1 = (time_taken1 + (a2.tv_usec -
+                            a1.tv_usec)) * 1e-6;
+  cout << "Time taken by initialize_device_threads_pool is : " << fixed
+        << time_taken1<<"\n";
+
   // Lock mutex for GraphTask.
   std::unique_lock<std::mutex> lock(graph_task->mutex_);
 
   auto queue = ready_queue(graph_task->cpu_ready_queue_, input_buffer.device());
+
+  // stop timer.
+  gettimeofday(&a3, NULL);
+  // unsync the I/O of C and C++.
+  ios_base::sync_with_stdio(false);
+  // Calculating total time taken by the program.
+  double time_taken2;
+  time_taken2 = (a3.tv_sec - a2.tv_sec) * 1e6;
+  time_taken2 = (time_taken2 + (a3.tv_usec -
+                            a2.tv_usec)) * 1e-6;
+  cout << "Time taken by ready_queue is : " << fixed
+        << time_taken2<<"\n";
 
   // worker_device == NO_DEVICE it's a CPU thread and it's trying to drive the
   // autograd engine with corresponding GraphTask, and its NOT a re-entrant call
@@ -923,7 +1095,21 @@ std::shared_ptr<at::ivalue::Future> Engine::execute_with_graph_task(
     // We set the worker_device to CPU_DEVICE only if worker_device was previously
     // NO_DEVICE. Setting it to CPU afterwards allow us to detect whether this is
     // a re-entrant call or not.
+    std::cout<<"worker_device == NO_DEVICE\n";
+
     set_device(CPU_DEVICE);
+
+    // stop timer.
+    gettimeofday(&a4, NULL);
+    // unsync the I/O of C and C++.
+    ios_base::sync_with_stdio(false);
+    // Calculating total time taken by the program.
+    double time_taken3;
+    time_taken3 = (a4.tv_sec - a3.tv_sec) * 1e6;
+    time_taken3 = (time_taken3 + (a4.tv_usec -
+                              a3.tv_usec)) * 1e-6;
+    cout << "Time taken by set_device is : " << fixed
+          << time_taken3<<"\n";
 
     // set the graph_task owner to the current device
     graph_task->owner_ = worker_device;
@@ -932,19 +1118,49 @@ std::shared_ptr<at::ivalue::Future> Engine::execute_with_graph_task(
     // we can enqueue it.
     queue->push(NodeTask(graph_task, std::move(graph_root), std::move(input_buffer)));
 
+    
+
     // The owning thread start to drive the engine execution for any CPU task that
     // was just pushed or will be added later from other worker threads
     lock.unlock();
+
+    // stop timer.
+    gettimeofday(&a5, NULL);
+    // unsync the I/O of C and C++.
+    ios_base::sync_with_stdio(false);
+    // Calculating total time taken by the program.
+    double time_taken4;
+    time_taken4 = (a5.tv_sec - a4.tv_sec) * 1e6;
+    time_taken4 = (time_taken4 + (a5.tv_usec -
+                              a4.tv_usec)) * 1e-6;
+    cout << "Time taken by queue->push+unlock is : " << fixed
+          << time_taken4<<"\n";
+
     thread_main(graph_task);
+
+    // stop timer.
+    gettimeofday(&a6, NULL);
+    // unsync the I/O of C and C++.
+    ios_base::sync_with_stdio(false);
+    // Calculating total time taken by the program.
+    double time_taken5;
+    time_taken5 = (a6.tv_sec - a5.tv_sec) * 1e6;
+    time_taken5 = (time_taken5 + (a6.tv_usec -
+                              a5.tv_usec)) * 1e-6;
+    cout << "Time taken by thread_main is : " << fixed
+          << time_taken5<<"\n";
+
     TORCH_INTERNAL_ASSERT(graph_task->future_result_->completed());
     // reset the worker_device after the completion of the graph_task, this is so
     // that the initial state of the engine remains the same across every backward()
     // or grad() call, we don't need to reset local_ready_queue as we could possibly
     // reuse it for new backward calls.
+
     worker_device = NO_DEVICE;
   } else {
     // If worker_device is any devices (i.e. CPU, CUDA): this is a re-entrant
     //    backward call from that device.
+    std::cout<<"!worker_device == NO_DEVICE";
     graph_task->owner_ = worker_device;
 
     // Now that all the non-thread safe fields of the graph_task have been populated,
@@ -960,6 +1176,7 @@ std::shared_ptr<at::ivalue::Future> Engine::execute_with_graph_task(
       // not used in the block above (when we call add_thread_pool_task).
       // In the codepath above, GraphTask.reentrant_depth_ is used to
       // bootstrap total_depth in the other thread.
+      
       ++total_depth;
 
       // Get back to work while we wait for our new graph_task to

@@ -8,6 +8,9 @@ import warnings
 from collections import OrderedDict
 from typing import Any, List, Optional
 
+import traceback
+import time
+import inspect
 
 class _ContextMethodMixin(object):
 
@@ -86,7 +89,33 @@ class BackwardCFunction(_C._FunctionBase, _ContextMethodMixin, _HookMixin):
 
     def apply(self, *args):
         # _forward_cls is defined by derived class
-        return self._forward_cls.backward(self, *args)  # type: ignore
+        # measure the time of apply. 
+        print("-- call stack of apply")
+        for line in traceback.format_stack():
+            print(line.strip())
+        print("---")
+        print("I got into apply() in /home/cc/pytorch-meng/torch/autograd/function.py")
+        # try to find where is _forward_cls
+        print("The len(args) in apply(self, *args) is: ")
+        print(len(args))
+        # It seems that the args for calling it the second time in backward is much larger. 
+        torch.cuda.synchronize()
+        time_bef_bac=time.time()
+        torch.cuda.synchronize()
+
+        file_path = inspect.getsourcefile(self._forward_cls.backward)
+        source_lines, starting_line_number = inspect.findsource(self._forward_cls.backward)
+        print("backward is implemented in file: {}  starting_line_number: {}".format(file_path, starting_line_number))
+    
+        temp=self._forward_cls.backward(self, *args)
+        
+        # the function above points to two functions
+        torch.cuda.synchronize()
+        time_aft_bac=time.time()
+        torch.cuda.synchronize()
+        print("Time spent in _forward_cls.backward: {}".format(time_aft_bac-time_bef_bac))
+
+        return temp  # type: ignore
 
 
 class FunctionMeta(type):
@@ -382,6 +411,7 @@ class NestedIOFunction(Function):
         return result
 
     def backward(self, *gradients: Any) -> Any:  # type: ignore
+        print("I got into backward() /home/cc/pytorch-meng/torch/autograd/function.py")
         nested_gradients = _unflatten(gradients, self._nested_output)
         result = self.backward_extended(*nested_gradients)  # type: ignore
         return tuple(_iter_None_tensors(result))

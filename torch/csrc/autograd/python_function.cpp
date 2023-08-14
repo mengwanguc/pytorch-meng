@@ -189,6 +189,8 @@ auto PyNode::apply(variable_list&& inputs) -> variable_list {
 }
 
 auto PyNode::is_traceable() -> bool {
+  // std::cout<<"I'm in /home/cc/pytorch-meng/torch/csrc/autograd/python_function.cpp";
+  // not in here at all
   pybind11::gil_scoped_acquire gil;
   THPObjectPtr forward_class {PyObject_GetAttrString(obj, "_forward_cls")};
   if (!forward_class) throw_python_error();

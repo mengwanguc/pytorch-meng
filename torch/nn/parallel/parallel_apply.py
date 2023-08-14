@@ -35,6 +35,7 @@ def parallel_apply(modules, inputs, kwargs_tup=None, devices=None):
     element of :attr:`inputs` can either be a single object as the only argument
     to a module, or a collection of positional arguments.
     """
+    # len(modules) = 2, len(inputs) = 2, must make sure they can take inputs respectively. 
     assert len(modules) == len(inputs)
     if kwargs_tup is not None:
         assert len(modules) == len(kwargs_tup)
@@ -58,6 +59,8 @@ def parallel_apply(modules, inputs, kwargs_tup=None, devices=None):
                 # this also avoids accidental slicing of `input` if it is a Tensor
                 if not isinstance(input, (list, tuple)):
                     input = (input,)
+                # the line below is where forward is getting called. By threads. 
+                print("When having 2 GPUs, I'm calling forward from /home/cc/pytorch-meng/torch/nn/parallel/parallel_apply.py.")
                 output = module(*input, **kwargs)
             with lock:
                 results[i] = output
@@ -65,8 +68,9 @@ def parallel_apply(modules, inputs, kwargs_tup=None, devices=None):
             with lock:
                 results[i] = ExceptionWrapper(
                     where="in replica {} on device {}".format(i, device))
-
+    # creating new threads. 
     if len(modules) > 1:
+        # more than 1 modules are here. 
         threads = [threading.Thread(target=_worker,
                                     args=(i, module, input, kwargs, device))
                    for i, (module, input, kwargs, device) in

@@ -56,6 +56,7 @@ void initCommMethods(PyObject *module) {
             }
             // Note: We're holding the GIL up to here.
             pybind11::gil_scoped_release no_gil;
+            // Line below is where we do the transfer of tensors. 
             return scatter(tensor, devices, chunk_sizes, dim, streams);
           },
           py::arg("tensor"),

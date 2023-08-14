@@ -70,6 +70,7 @@ variable_list run_backward(
     const variable_list& inputs,
     bool allow_unused,
     bool accumulate_grad) {
+  std::cout<<"I got into run_backward() in /home/cc/pytorch-meng/torch/csrc/autograd/autograd.cpp\n";
   size_t num_tensors = outputs.size();
   edge_list roots;
   roots.reserve(num_tensors);
@@ -133,6 +134,7 @@ void backward(
     c10::optional<bool> retain_graph,
     bool create_graph,
     const variable_list& inputs) {
+  std::cout<<"I got into backward() in /home/cc/pytorch-meng/torch/csrc/autograd/autograd.cpp\n";
   variable_list gradients = _make_grads(tensors, grad_tensors);
   if (!retain_graph) {
     retain_graph = create_graph;

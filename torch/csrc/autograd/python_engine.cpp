@@ -21,6 +21,11 @@
 
 using namespace torch::autograd;
 
+#include <bits/stdc++.h>
+using namespace std;
+#include <torch/cuda.h>
+#include <sys/time.h>
+
 struct THPEngine {
     PyObject_HEAD
 };
@@ -105,11 +110,14 @@ variable_list PythonEngine::execute(
     bool create_graph,
     bool accumulate_grad,
     const edge_list& outputs) {
+  std::cout<<"Got into execute()\n";
+  // It is in both. 
   TORCH_CHECK(!PyGILState_Check(), "The autograd engine was called while holding the GIL. If you are using the C++ "
                                    "API, the autograd engine is an expensive operation that does not require the "
                                    "GIL to be held so you should release it with 'pybind11::gil_scoped_release no_gil;'"
                                    ". If you are not using the C++ API, please report a bug to the pytorch team.")
   try {
+    std::cout<<"Got before Engine::execute()\n";
     return Engine::execute(roots, inputs, keep_graph, create_graph, accumulate_grad, outputs);
   } catch (python_error& e) {
     e.restore();
@@ -139,6 +147,10 @@ PyObject *THPEngineClass = nullptr;
 // Implementation of torch._C._EngineBase.run_backward
 PyObject *THPEngine_run_backward(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+  std::cout<<"I got into /home/cc/pytorch-meng/torch/csrc/autograd/python_engine.cpp\n";
+  // I cannot understand the code below, but according to my observation, I think that 
+  // The code below does not consider the number of GPUs existing so it must also be going
+  // somewhere else that I can find. 
   HANDLE_TH_ERRORS
   PyObject *tensors = nullptr;
   PyObject *grad_tensors = nullptr;
@@ -151,13 +163,18 @@ PyObject *THPEngine_run_backward(PyObject *self, PyObject *args, PyObject *kwarg
       "tensors", "grad_tensors", "keep_graph", "create_graph", "inputs",
       "allow_unreachable", "accumulate_grad", nullptr
   };
+  // above are the information needed (inputs)
+
+  // return nullptr if cannnot be parsed
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OObb|Obb", (char**)accepted_kwargs,
         &tensors, &grad_tensors, &keep_graph, &create_graph, &inputs, &allow_unreachable, &accumulate_grad))
     return nullptr;
+  // two assertion
   THPUtils_assert(PyTuple_Check(tensors), "tensors argument is expected to "
       "be a tuple, but got %s", THPUtils_typename(tensors));
   THPUtils_assert(PyTuple_Check(grad_tensors), "grad_tensors argument is "
       "expected to be a tuple, but got %s", THPUtils_typename(grad_tensors));
+
 
   Py_ssize_t num_tensors = PyTuple_GET_SIZE(tensors);
   Py_ssize_t num_gradients = PyTuple_GET_SIZE(grad_tensors);
@@ -175,6 +192,9 @@ PyObject *THPEngine_run_backward(PyObject *self, PyObject *args, PyObject *kwarg
   roots.reserve(num_tensors);
   variable_list grads;
   grads.reserve(num_tensors);
+  // check out the num_tensors here. 
+  std::cout<<"The num_tensors is: "<<num_tensors<<"\n";
+  // num_tensors = 1
   for (int i = 0; i < num_tensors; i++) {
     PyObject *_tensor = PyTuple_GET_ITEM(tensors, i);
     THPUtils_assert(THPVariable_Check(_tensor), "element %d of tensors "
@@ -244,13 +264,55 @@ PyObject *THPEngine_run_backward(PyObject *self, PyObject *args, PyObject *kwarg
     }
   }
 
+  std::cout<<"Got before variable_list outputs\n";
+  // It is in both. 
+  // try to measure the time span across the following code, because it seems to be 
+  // calling toward python code, and we know that 2 GPUs need apply() in python and 
+  // 1 GPU does not need that
+  
   variable_list outputs;
   {
     pybind11::gil_scoped_release no_gil;
+    // auto& allows you to declare a reference to a variable whose type is automatically 
+    // deduced by the compiler based on its initializer.
     auto& engine = python::PythonEngine::get_python_engine();
+
+    // It is in both. 
+    struct timeval start, end;
+ 
+    // start timer.
+    gettimeofday(&start, NULL);
+ 
+    // unsync the I/O of C and C++.
+    ios_base::sync_with_stdio(false);
+    cout<<"Before engine.execute. \n";
+    //try to look at the inputs 
+    
     outputs = engine.execute(roots, grads, keep_graph, create_graph, accumulate_grad, output_edges);
+    // cout<<"outputs: "<<!!outputs;
+    // outputs is empty and cannot be printed, nothing is printed in other words.  
+    cout<<"After engine.execute. \n";
+    // stop timer.
+    gettimeofday(&end, NULL);
+ 
+    // Calculating total time taken by the program.
+    double time_taken;
+ 
+    time_taken = (end.tv_sec - start.tv_sec) * 1e6;
+    time_taken = (time_taken + (end.tv_usec -
+                              start.tv_usec)) * 1e-6;
+ 
+    cout << "Time taken by engine.execute is : " << fixed
+         << time_taken;
+    cout << " sec" << endl;
   }
 
+  // the code below is basically return None. 
+
+  // need inputs != null and backward_api_called ==false
+  std::cout<<"This is backward_api_called: "<<!!backward_api_called<<"\n";
+  std::cout<<"This is inputs: "<<!!inputs<<"\n";
+  // got 1, 1 meaning both exist. so !backward_api_called is 0, the following if statement won't be called. 
   if (!backward_api_called && inputs != nullptr) {
     int num_inputs = PyTuple_GET_SIZE(inputs);
     THPObjectPtr py_outputs {PyTuple_New(num_inputs)};
@@ -262,10 +324,19 @@ PyObject *THPEngine_run_backward(PyObject *self, PyObject *args, PyObject *kwarg
                       "desired behavior.");
       PyTuple_SET_ITEM(py_outputs.get(), i, THPVariable_Wrap(outputs[i]));
     }
+    std::cout<<"before py_outputs.release()\n";
+    // it is in neither
     return py_outputs.release();
   } else {
+    std::cout<<"before Py_RETURN_NONE\n";
+    // it is in both 1 and 2 GPUs
+    //Py_RETURN_NONE is a convenient macro provided by the CPython API to return 
+    //the None object without having to manually construct the Python object.
+    // so this is just return None
     Py_RETURN_NONE;
   }
+  std::cout<<"before END_HANDLE_TH_ERRORS\n";
+  // it is in neither
   END_HANDLE_TH_ERRORS
 }
 

@@ -886,6 +886,8 @@ class Module:
         if torch._C._get_tracing_state():
             result = self._slow_forward(*input, **kwargs)
         else:
+            # print("_call_impl! ! ! ! ! ! ! ! ! ! ")
+            # print(input, kwargs)
             result = self.forward(*input, **kwargs)
         for hook in itertools.chain(
                 _global_forward_hooks.values(),
