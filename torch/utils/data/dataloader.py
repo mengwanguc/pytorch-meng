@@ -918,7 +918,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._worker_output_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
 
         # Profiling data
-        self._timing_file = open("./p100/pytorch_timing", "w+")
+        self._timing_file = open("pytorch_timing.csv", "w+")
         self._timing_file.write("worker_id,time_id,time,duration")
         self._timing_file_lock = multiprocessing.Lock()
 
