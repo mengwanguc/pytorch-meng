@@ -30,7 +30,6 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor
 
         try:
             id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
-            print("_pin_memory_loop: output_status[{}] set to True".format(id))
         except queue.Empty:
             continue
         idx, data = r
@@ -65,6 +64,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
         
         try:
             id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+            print("_pin_memory_loop: output_status[{}] set to True".format(id))
             output_status[id] = True
         except queue.Empty:
             continue
