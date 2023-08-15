@@ -242,8 +242,11 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                             all_idx.append(idx)
                             all_index.append(index)
                 except queue.Empty:
+                    print("waited {} s... queue empty".format(MP_STATUS_CHECK_INTERVAL))
                     pass
             
+            print("worker {} fetching superbatch of {} batches".format(worker_id, len(all_index)))
+
             # Don't handle this yet...
             if init_exception is not None:
                 assert False
