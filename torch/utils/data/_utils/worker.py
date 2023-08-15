@@ -212,7 +212,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     # Perform the regular checks.
                     if isinstance(r, _ResumeIteration):
                         # Acknowledge the main process
-                        data_queue.put((r, None))
+                        data_queue.put((None, (r, None)))
                         iteration_end = False
 
                         # Re-create fetcher for worker re-use policy.
