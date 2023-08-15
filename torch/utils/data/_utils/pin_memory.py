@@ -132,7 +132,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
     timing_file_lock.acquire()
     for key in timing:
         for start, duration in timing[key]:
-            timing_file.write("{},{},{},{}\n", -1, "pin_memory", start, duration)
+            timing_file.write("{},{},{},{}\n".format(-1, "pin_memory", start, duration))
     timing_file_lock.release()
 
 

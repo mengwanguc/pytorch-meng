@@ -1239,7 +1239,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 self._timing_file_lock.acquire()
                 for key in self._timing:
                     for start, duration in self._timing[key]:
-                        self._timing_file.write("{},{},{},{}\n", -1, "next_data", start, duration)
+                        self._timing_file.write("{},{},{},{}\n".format(-1, "next_data", start, duration))
                 self._timing_file_lock.release()
 
                 raise StopIteration
