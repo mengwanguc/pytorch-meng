@@ -964,7 +964,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 args=(self._worker_result_queue, self._data_queue,
                       torch.cuda.current_device(),
                       self._pin_memory_thread_done_event,
-                      self._prefetch_factor, self._output_status))
+                      self._prefetch_factor * self._num_workers, self._output_status))
             pin_memory_thread.daemon = True
             pin_memory_thread.start()
             # Similar to workers (see comment above), we only register
@@ -982,7 +982,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._pin_memory_thread_done_event,
                       self._estimated_pin_mem_time,
                       self._balloons,
-                      self._prefetch_factor,
+                      self._prefetch_factor * self._num_workers,
                       self._output_status,
                       self._timing_file,
                       self._timing_file_lock))

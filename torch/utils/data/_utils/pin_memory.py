@@ -15,7 +15,7 @@ import sys
 import mlock
 
 
-def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor, output_status):
+def _pin_memory_loop(in_queue, out_queue, device_id, done_event, max_output_length, output_status):
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
     torch.set_num_threads(1)
@@ -25,7 +25,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
     while not done_event.is_set():
-        if out_queue.qsize() >= prefetch_factor:
+        if out_queue.qsize() >= max_output_length:
             continue
 
         try:
@@ -48,7 +48,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor
                 continue
         del r  # save memory
 
-def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time, balloons, prefetch_factor, output_status, timing_file, timing_file_lock):
+def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time, balloons, max_output_length, output_status, timing_file, timing_file_lock):
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
     torch.set_num_threads(1)
@@ -58,7 +58,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
         "pin_memory":[]
     }
     while not done_event.is_set():
-        if out_queue.qsize() >= prefetch_factor:
+        if out_queue.qsize() >= max_output_length:
             continue
         print("pin_memory (1)")
         
