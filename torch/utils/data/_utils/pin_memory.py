@@ -48,19 +48,26 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor
                 continue
         del r  # save memory
 
-def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time, balloons, prefetch_factor):
+def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time, balloons, prefetch_factor, timing_file, timing_file_lock):
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
     torch.set_num_threads(1)
 
+
+    timing = {
+        "pin_memory":[]
+    }
     while not done_event.is_set():
         if out_queue.qsize() >= prefetch_factor:
             continue
-
+        
         try:
             r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
         except queue.Empty:
             continue
+        
+        pin_memory_time_start = time.time()
+
         idx, data = r
         if not done_event.is_set() and not isinstance(data, ExceptionWrapper):
             try:
@@ -117,7 +124,16 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                 break
             except queue.Full:
                 continue
+        
+        timing["pin_memory"].append((pin_memory_time_start, time.time() - pin_memory_time_start))
+        
         del r  # save memory
+    
+    timing_file_lock.acquire()
+    for key in timing:
+        for start, duration in timing[key]:
+            timing_file.write("{},{},{},{}\n", -1, "pin_memory", start, duration)
+    timing_file_lock.release()
 
 
 

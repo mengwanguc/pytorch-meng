@@ -918,6 +918,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._worker_output_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
 
         # Profiling data
+        self._timing = {"next_data":[]}
         self._timing_file = open("pytorch_timing.csv", "w+")
         self._timing_file.write("worker_id,time_id,time,duration\n")
         self._timing_file_lock = multiprocessing.Lock()
@@ -981,7 +982,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._pin_memory_thread_done_event,
                       self._estimated_pin_mem_time,
                       self._balloons,
-                      self._prefetch_factor))
+                      self._prefetch_factor,
+                      self._timing_file,
+                      self._timing_file_lock))
             emulate_pin_memory_thread.daemon = True
             emulate_pin_memory_thread.start()
             # Similar to workers (see comment above), we only register
@@ -1209,6 +1212,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     return data
 
     def _next_data(self):
+        next_data_time_start = time.time()
+
         while True:
             # If the worker responsible for `self._rcvd_idx` has already ended
             # and was unable to fulfill this task (due to exhausting an `IterableDataset`),
@@ -1228,6 +1233,15 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 # no valid `self._rcvd_idx` is found (i.e., didn't break)
                 if not self._persistent_workers:
                     self._shutdown_workers()
+                self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
+
+                # Write timing to file
+                self._timing_file_lock.acquire()
+                for key in self._timing:
+                    for start, duration in self._timing[key]:
+                        self._timing_file.write("{},{},{},{}\n", -1, "next_data", start, duration)
+                self._timing_file_lock.release()
+
                 raise StopIteration
 
             # Now `self._rcvd_idx` is the batch index we want to fetch
@@ -1235,7 +1249,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             # Check if the next sample has already been generated
             if len(self._task_info[self._rcvd_idx]) == 2:
                 data = self._task_info.pop(self._rcvd_idx)[1]
-                return self._process_data(data)
+                out = self._process_data(data)
+                self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
+                return out
 
             assert not self._shutdown and self._tasks_outstanding > 0
             idx, data = self._get_data()
@@ -1255,7 +1271,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 self._task_info[idx] += (data,)
             else:
                 del self._task_info[idx]
-                return self._process_data(data)
+                out = self._process_data(data)
+                self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
+                return out
 
     def _try_put_index(self):
         assert self._tasks_outstanding < max(self._super_batch_size, self._prefetch_factor) * self._num_workers
