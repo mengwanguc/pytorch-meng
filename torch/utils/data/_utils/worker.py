@@ -190,7 +190,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 idx, buffered = internal_buffer.get()
                 processed = [process_raw(dataset, raw_data, target) for target, raw_data in buffered]
                 data_queue.put((worker_id, (idx, collate_fn(processed))))
-                print("_worker_loop: output_status[{}] set to False".format(id))
+                print("_worker_loop: output_status[{}] set to False".format(worker_id))
                 output_status[worker_id] = False
 
                 timing['internal_to_output'].append((internal_to_output_start, time.time() - internal_to_output_start))
