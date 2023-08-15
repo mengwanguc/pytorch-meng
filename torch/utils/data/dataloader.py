@@ -915,7 +915,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         self._next_worker_idx = 0
         self._worker_internal_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
-        self._worker_output_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
+        self._output_status = [True for _ in range(self._num_workers)]
 
         # Profiling data
         self._timing = {"next_data":[]}
@@ -941,7 +941,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._auto_collation, self._collate_fn, self._drop_last,
                       self._base_seed + i, self._worker_init_fn, i, self._num_workers,
                       self._persistent_workers, self._super_batch_size, self._process_raw,
-                      self._worker_internal_buffers[i], self._worker_output_buffers[i],
+                      self._worker_internal_buffers[i], self._output_status,
                       self._timing_file, self._timing_file_lock))
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
@@ -964,7 +964,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 args=(self._worker_result_queue, self._data_queue,
                       torch.cuda.current_device(),
                       self._pin_memory_thread_done_event,
-                      self._prefetch_factor))
+                      self._prefetch_factor, self._output_status))
             pin_memory_thread.daemon = True
             pin_memory_thread.start()
             # Similar to workers (see comment above), we only register
@@ -983,6 +983,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._estimated_pin_mem_time,
                       self._balloons,
                       self._prefetch_factor,
+                      self._output_stauts,
                       self._timing_file,
                       self._timing_file_lock))
             emulate_pin_memory_thread.daemon = True
@@ -1044,8 +1045,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         #   (bool: whether successfully get data, any: data if successful else None)
         try:
             # Get data round-robin style from each worker's output queue.
-            data = self._worker_output_buffers[self._next_worker_idx].get(timeout=timeout)
-            self._next_worker_idx = (self._next_worker_idx + 1) % self._num_workers
+            id, data = self._worker_result_queue.get(timeout=timeout)
+            self._output_status[id] = True # Allow worker to produce another output
             return (True, data)
         except Exception as e:
             # At timeout and error, we manually check whether any worker has

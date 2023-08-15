@@ -15,7 +15,7 @@ import sys
 import mlock
 
 
-def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor):
+def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor, output_status):
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
     torch.set_num_threads(1)
@@ -29,7 +29,8 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor
             continue
 
         try:
-            r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+            id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+            output_status[id] = True
         except queue.Empty:
             continue
         idx, data = r
@@ -48,7 +49,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor
                 continue
         del r  # save memory
 
-def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time, balloons, prefetch_factor, timing_file, timing_file_lock):
+def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimated_pin_mem_time, balloons, prefetch_factor, output_status, timing_file, timing_file_lock):
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
     torch.set_num_threads(1)
@@ -63,7 +64,8 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
         print("pin_memory (1)")
         
         try:
-            r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+            id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+            output_status[id] = True
         except queue.Empty:
             continue
         print("pin_memory (2)")
