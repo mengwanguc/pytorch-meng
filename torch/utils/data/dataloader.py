@@ -21,6 +21,7 @@ from torch._six import queue, string_classes
 from . import IterableDataset, Sampler, SequentialSampler, RandomSampler, BatchSampler, Dataset
 from . import _utils
 
+from ctypes import c_bool
 import time
 
 T_co = TypeVar('T_co', covariant=True)
@@ -916,7 +917,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         self._next_worker_idx = 0
         self._worker_internal_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
-        self._output_status = [multiprocessing_context.Value(bool, True) for _ in range(self._num_workers)]
+        self._output_status = [multiprocessing_context.Value(c_bool, True) for _ in range(self._num_workers)]
 
         # Profiling data
         self._timing = {"next_data":[]}
