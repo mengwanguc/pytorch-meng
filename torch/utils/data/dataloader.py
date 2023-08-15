@@ -916,10 +916,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         self._next_worker_idx = 0
         self._worker_internal_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
-        shared_buf = multiprocessing_context.shared_memory(create=True, size=self._num_workers)
-        self._output_status = np.ndarray((self._num_workers, ), dtype=bool, buffer=shared_buf.buf)
-        for i in range(self._num_workers):
-            self._output_status[i] = True
+        self._output_status = [multiprocessing_context.Value(bool, True) for _ in range(self._num_workers)]
 
         # Profiling data
         self._timing = {"next_data":[]}
