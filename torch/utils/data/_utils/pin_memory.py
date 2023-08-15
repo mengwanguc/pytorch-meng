@@ -62,17 +62,13 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
     while not done_event.is_set():
         if out_queue.qsize() >= max_output_length:
             continue
-        print("pin_memory (1)")
         
         try:
             worker_id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
             with output_status[worker_id].get_lock():
                 output_status[worker_id].value = True
-            print("_pin_memory_loop: output_status[{}] set to True".format(id))
         except queue.Empty:
-            print("_pin_memory_loop: in_queue empty")
             continue
-        print("pin_memory (2)")
         
         pin_memory_time_start = time.time()
 

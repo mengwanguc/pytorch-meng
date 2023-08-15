@@ -181,7 +181,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         while watchdog.is_alive() and not final_signal:                                                                          # REWORK
 
             # Always keep 1 processed data ready to go in the result queue.
-            print("id = {}, output_status = {}".format(worker_id, [elem.value for elem in output_status]))
             if output_status[worker_id].value and internal_buffer.qsize() > 0: # _output_status[i] checks whether this worker is allowed to insert into the output queue
                 # Take an item from the internal buffer, process it, and put
                 # it into the output buffer.
@@ -193,7 +192,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 data_queue.put((worker_id, (idx, collate_fn(processed))))
                 with output_status[worker_id].get_lock():
                     output_status[worker_id].value = False
-                print("_worker_loop: output_status[{}] set to False".format(worker_id))
 
                 timing['internal_to_output'].append((internal_to_output_start, time.time() - internal_to_output_start))
                 continue
