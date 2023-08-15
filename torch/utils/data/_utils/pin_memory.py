@@ -60,6 +60,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
     while not done_event.is_set():
         if out_queue.qsize() >= prefetch_factor:
             continue
+        print("pin_memory")
         
         try:
             r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
