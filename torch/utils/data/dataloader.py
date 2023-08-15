@@ -5,6 +5,7 @@ functions to be run in multiprocessing. E.g., the data loading worker loop is
 in `./_utils/worker.py`.
 """
 
+import numpy as np
 import os
 import threading
 import itertools
@@ -915,7 +916,10 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         self._next_worker_idx = 0
         self._worker_internal_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
-        self._output_status = [True for _ in range(self._num_workers)]
+        shared_buf = multiprocessing_context.shared_memory(create=True, size=self._num_workers)
+        self._output_status = np.ndarray((self._num_workers, ), dtype=bool, buffer=shared_buf.buf)
+        for i in range(self._num_workers):
+            self._output_status[i] = True
 
         # Profiling data
         self._timing = {"next_data":[]}
