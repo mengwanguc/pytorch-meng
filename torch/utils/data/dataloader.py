@@ -983,7 +983,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._estimated_pin_mem_time,
                       self._balloons,
                       self._prefetch_factor,
-                      self._output_stauts,
+                      self._output_status,
                       self._timing_file,
                       self._timing_file_lock))
             emulate_pin_memory_thread.daemon = True
