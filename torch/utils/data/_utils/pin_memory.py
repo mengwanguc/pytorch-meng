@@ -30,8 +30,9 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, max_output_leng
 
         try:
             worker_id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
-            with output_status[worker_id].get_lock():
-                output_status[worker_id].value = True
+            if output_status[worker_id]:
+                with output_status[worker_id].get_lock():
+                    output_status[worker_id].value = True
         except queue.Empty:
             continue
         idx, data = r
@@ -65,8 +66,9 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
         
         try:
             worker_id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
-            with output_status[worker_id].get_lock():
-                output_status[worker_id].value = True
+            if output_status[worker_id]:
+                with output_status[worker_id].get_lock():
+                    output_status[worker_id].value = True
         except queue.Empty:
             continue
         
