@@ -67,6 +67,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
             print("_pin_memory_loop: output_status[{}] set to True".format(id))
             output_status[id] = True
         except queue.Empty:
+            print("_pin_memory_loop: in_queue empty")
             continue
         print("pin_memory (2)")
         

@@ -1045,9 +1045,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         #   (bool: whether successfully get data, any: data if successful else None)
         try:
             # Get data round-robin style from each worker's output queue.
-            id, data = self._worker_result_queue.get(timeout=timeout)
-            print("_try_get_data: output_status[{}] set to True".format(id))
-            self._output_status[id] = True # Allow worker to produce another output
+            data = self._data_queue.get(timeout=timeout)
             return (True, data)
         except Exception as e:
             # At timeout and error, we manually check whether any worker has
