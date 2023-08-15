@@ -59,12 +59,15 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
 
 
     timing = {
-        "pin_memory":[]
+        "pin_memory":[],
+        "pin_memory_whole":[],
     }
+
+    since_last_pin = time.time()
     while not done_event.is_set():
         if out_queue.qsize() >= max_output_length:
             continue
-        
+
         try:
             worker_id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
             if worker_id == None:
@@ -133,7 +136,10 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
             except queue.Full:
                 continue
         
-        timing["pin_memory"].append((pin_memory_time_start, time.time() - pin_memory_time_start))
+        cur_time = time.time()
+        timing["pin_memory"].append((pin_memory_time_start, cur_time - pin_memory_time_start))
+        timing["pin_memory_whole"].append((since_last_pin, cur_time - since_last_pin))
+        since_last_pin = time.time()
         
         del r  # save memory
     

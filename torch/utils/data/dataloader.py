@@ -920,7 +920,10 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._output_status = [multiprocessing_context.Value(c_bool, True) for _ in range(self._num_workers)]
 
         # Profiling data
-        self._timing = {"next_data":[]}
+        self._timing = {
+            "next_data":[],
+            "get_data":[],
+        }
         self._timing_file = open("pytorch_timing.csv", "w+")
         self._timing_file.write("worker_id,time_id,time,duration\n")
         self._timing_file_lock = multiprocessing.Lock()
@@ -1045,9 +1048,11 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         #
         # Returns a 2-tuple:
         #   (bool: whether successfully get data, any: data if successful else None)
+        try_get_data_time_start = time.time()
         try:
             # Get data round-robin style from each worker's output queue.
             data = self._data_queue.get(timeout=timeout)
+            self._timing["try_get_data"].append((try_get_data_time_start, time.time() - try_get_data_time_start))
             return (True, data)
         except Exception as e:
             # At timeout and error, we manually check whether any worker has
@@ -1062,6 +1067,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 pids_str = ', '.join(str(w.pid) for w in failed_workers)
                 raise RuntimeError('DataLoader worker (pid(s) {}) exited unexpectedly'.format(pids_str)) from e
             if isinstance(e, queue.Empty):
+                self._timing["try_get_data"].append((try_get_data_time_start, time.time() - try_get_data_time_start))
                 return (False, None)
             import tempfile
             import errno
@@ -1191,9 +1197,12 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         #
         # If `pin_memory=True`, we also need check if `pin_memory_thread` had
         # died at timeouts.
+        get_data_time_start = time.time()
+
         if self._timeout > 0:
             success, data = self._try_get_data(self._timeout)
             if success:
+                self._timing["get_data"].append((get_data_time_start, time.time() - get_data_time_start))
                 return data
             else:
                 raise RuntimeError('DataLoader timed out after {} seconds'.format(self._timeout))
@@ -1201,6 +1210,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             while self._pin_memory_thread.is_alive():
                 success, data = self._try_get_data()
                 if success:
+                    self._timing["get_data"].append((get_data_time_start, time.time() - get_data_time_start))
                     return data
             else:
                 # while condition is false, i.e., pin_memory_thread died.
@@ -1211,6 +1221,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             while True:
                 success, data = self._try_get_data()
                 if success:
+                    self._timing["get_data"].append((get_data_time_start, time.time() - get_data_time_start))
                     return data
 
     def _next_data(self):
