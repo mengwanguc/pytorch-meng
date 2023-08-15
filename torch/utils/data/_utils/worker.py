@@ -181,6 +181,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         while watchdog.is_alive() and not final_signal:                                                                          # REWORK
 
             # Always keep 1 processed data ready to go in the result queue.
+            print("id = {}, output_status = {}".format(worker_id, output_status))
             if output_status[worker_id]: # _output_status[i] checks whether this worker is allowed to insert into the output queue
                 # Take an item from the internal buffer, process it, and put
                 # it into the output buffer.
