@@ -30,7 +30,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, prefetch_factor
 
         try:
             id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
-            output_status[id] = True
+            print("_pin_memory_loop: output_status[{}] set to True".format(id))
         except queue.Empty:
             continue
         idx, data = r
