@@ -178,7 +178,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             'internal_to_output':[],
         }
 
-        while watchdog.is_alive() and (not final_signal or internal_buffer.qsize > 0):                                                                          # REWORK
+        while watchdog.is_alive() and (not final_signal or internal_buffer.qsize() > 0):                                                                          # REWORK
 
             # Always keep 1 processed data ready to go in the result queue.
             if output_status[worker_id].value and internal_buffer.qsize() > 0: # _output_status[i] checks whether this worker is allowed to insert into the output queue
