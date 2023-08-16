@@ -1292,12 +1292,13 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
     def _try_put_index(self):
         assert self._tasks_outstanding < max(self._super_batch_size, self._prefetch_factor) * self._num_workers
 
-        empty = False
         try:
             index = self._next_index()
         except StopIteration:
-            empty = True
+            self._index_queues[next(self._worker_queue_idx_cycle)].put(-1)
+            return
         for _ in range(self._num_workers):  # find the next active worker, if any
+            
             worker_queue_idx = next(self._worker_queue_idx_cycle)
             if self._workers_status[worker_queue_idx]:
                 break
@@ -1305,10 +1306,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             # not found (i.e., didn't break)
             return
 
-        if not empty:
-            self._index_queues[worker_queue_idx].put((self._send_idx, index))
-        else:
-            self._index_queues[worker_queue_idx].put(-1)
+        self._index_queues[worker_queue_idx].put((self._send_idx, index))
         self._task_info[self._send_idx] = (worker_queue_idx,)
         self._tasks_outstanding += 1
         self._send_idx += 1
