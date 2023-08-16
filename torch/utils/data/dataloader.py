@@ -1295,6 +1295,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         try:
             index = self._next_index()
         except StopIteration:
+            self._index_queues[next(self._worker_queue_idx_cycle)].put((-1, -1))
             return
         for _ in range(self._num_workers):  # find the next active worker, if any
             worker_queue_idx = next(self._worker_queue_idx_cycle)
