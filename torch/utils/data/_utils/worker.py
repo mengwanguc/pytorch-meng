@@ -265,6 +265,10 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         # Main process will raise KeyboardInterrupt anyways.
         pass
 
+    # Wait to exit gracefully
+    while not done_event.is_set():
+        pass
+
     # Write output to our file
     timing_lock.acquire()
     for key in timing:
