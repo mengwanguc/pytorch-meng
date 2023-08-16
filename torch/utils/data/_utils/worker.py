@@ -227,12 +227,15 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
                         # Continue filling superbatch.
                         continue
-                    elif r is None or r is -1:
-                        # Received final signal.
+                    elif r is None:
+                        # Received final signal. Verify conditions.
+                        assert done_event.is_set() or iteration_end
                         final_signal = True
                         break
                     elif done_event.is_set() or iteration_end:
                         # Continue to wait for the final signal.
+                        continue
+                    elif r is -1:
                         continue
                     else:
                         # If it wasn't a special case, append to be loaded.
@@ -263,10 +266,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
-        pass
-
-    # Wait to exit gracefully
-    while not done_event.is_set():
         pass
 
     # Write output to our file
