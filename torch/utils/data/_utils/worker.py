@@ -251,7 +251,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         break
                     elif done_event.is_set() or iteration_end or r == -1:
                         # Continue to wait for the final signal.
-                        continue
+                        break
                     else:
                         # If it wasn't a special case, append to be loaded.
                         idx, index = r
