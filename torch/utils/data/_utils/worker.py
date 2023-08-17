@@ -187,7 +187,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
             # Always keep 1 processed data ready to go in the result queue.
             if output_status[worker_id].value and internal_buffer.qsize() > 0: # _output_status[i] checks whether this worker is allowed to insert into the output queue
-                print("serving")
+                print("serving, qsize = {}, output_status[{}] = {}".format(internal_buffer.qsize(), worker_id, output_status[worker_id].value))
                 # Take an item from the internal buffer, process it, and put
                 # it into the output buffer.
 
