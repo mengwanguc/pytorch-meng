@@ -202,6 +202,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             
             # Check if the queue is empty and we've got a new superbatch preloaded
             if internal_buffer.qsize() == 0 and preloaded:
+                t = time.time()
                 preloaded = False
                 data_readback_start = time.time()
                 all_unprocessed_data = fetcher.readback(all_index)
@@ -209,6 +210,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                     # Tuple(idx, Tuple(target, data))
                     internal_buffer.put((idx, unprocessed_data))
+                print("readback time: {:.04}s".format(time.time() - t))
 
             # Check if we need to start the next preload.
             if preloaded:
