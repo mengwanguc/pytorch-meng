@@ -75,7 +75,6 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
                 continue
             with output_status[worker_id].get_lock():
                 output_status[worker_id].value = True
-                print("pin_memory just set output_status[{}] = True".format(worker_id))
         except queue.Empty:
             print("in_queue.get() timeout")
             continue

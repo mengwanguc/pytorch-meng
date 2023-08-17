@@ -189,29 +189,20 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             status = output_status[worker_id].value
             qsize = internal_buffer.qsize()
             if status and qsize > 0: # _output_status[i] checks whether this worker is allowed to insert into the output queue
-                print("serving, qsize = {}, output_status[{}] = {}".format(internal_buffer.qsize(), worker_id, output_status[worker_id].value))
                 # Take an item from the internal buffer, process it, and put
                 # it into the output buffer.
 
                 internal_to_output_start = time.time()
-
                 idx, buffered = internal_buffer.get()
-
-                t = time.time()
                 processed = [process_raw(dataset, raw_data, target) for target, raw_data in buffered]
-                print("preprocess time: {}".format(time.time() - t))
                 data_queue.put((worker_id, (idx, collate_fn(processed))))
                 with output_status[worker_id].get_lock():
                     output_status[worker_id].value = False
 
                 timing['internal_to_output'].append((internal_to_output_start, time.time() - internal_to_output_start))
-            else:
-                print("status = {}, qsize = {} | ".format(status, qsize), end = "")
             
             # Check if the queue is empty and we've got a new superbatch preloaded
             if internal_buffer.qsize() == 0 and preloaded:
-                print("preloading")
-                t = time.time()
                 preloaded = False
                 data_readback_start = time.time()
                 all_unprocessed_data = fetcher.readback(all_index)
@@ -219,14 +210,11 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                     # Tuple(idx, Tuple(target, data))
                     internal_buffer.put((idx, unprocessed_data))
-                print("readback time: {:.04}s, qsize = {}".format(time.time() - t, internal_buffer.qsize()))
                 
 
             # Check if we need to start the next preload.
             if preloaded:
                 continue
-
-            t = time.time()
 
             # Get a list of <= SUPER_BATCH_SIZE batches.
             all_idx = [] # Indices of the batches themselves.
@@ -282,10 +270,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             data_request_start = time.time()
             fetcher.request(all_index)
             timing['data_request'].append((data_request_start, time.time() - data_request_start))
-
             preloaded = True
-
-            print("request time: {:.04}s".format(time.time() - t))
 
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
