@@ -219,10 +219,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             # Get a list of <= SUPER_BATCH_SIZE batches.
             all_idx = [] # Indices of the batches themselves.
             all_index = [] # Batched indices of the files to be loaded.
-            print("fetching a superbatch! final_signal = {}, preloaded = {}".format(final_signal, preloaded))
             for i in range(super_batch_size):
                 try:
-                    print("Getting indices for {}/superbatch, qsize = {}".format(i, index_queue.qsize()))
                     r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
 
                     # Perform the regular checks.
@@ -246,7 +244,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     elif r is None:
                         # Received final signal. Verify conditions.
                         assert done_event.is_set() or iteration_end
-                        print("r is None")
                         final_signal = True
                         break
                     elif done_event.is_set() or iteration_end or r == -1:
@@ -255,7 +252,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     else:
                         # If it wasn't a special case, append to be loaded.
                         idx, index = r
-                        print("other case (len(index = {}))".format(len(index)))
                         if len(index) > 0:
                             all_idx.append(idx)
                             all_index.append(index)
@@ -268,7 +264,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 assert False
 
             if not all_index:
-                print("empty all_index")
                 continue
             
             # In the form of List[Tuple(target, data)]
