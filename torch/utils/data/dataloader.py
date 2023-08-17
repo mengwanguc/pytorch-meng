@@ -1300,7 +1300,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             index = self._next_index()
         except StopIteration:
             self._index_queues[next(self._worker_queue_idx_cycle)].put(-1)
-            print("_try_put_index() added -1 to an index queue")
             return
         for _ in range(self._num_workers):  # find the next active worker, if any
             
@@ -1309,7 +1308,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 break
         else:
             # not found (i.e., didn't break)
-            print("_try_put_index() returning early")
             return
 
         self._index_queues[worker_queue_idx].put((self._send_idx, index))
