@@ -203,8 +203,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     output_status[worker_id].value = False
 
                 timing['internal_to_output'].append((internal_to_output_start, time.time() - internal_to_output_start))
-            else:
-                print("NOT serving, qsize = {}, output_status[{}] = {}".format(internal_buffer.qsize(), worker_id, output_status[worker_id].value))
             
             # Check if the queue is empty and we've got a new superbatch preloaded
             if internal_buffer.qsize() == 0 and preloaded:
@@ -218,8 +216,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     # Tuple(idx, Tuple(target, data))
                     internal_buffer.put((idx, unprocessed_data))
                 print("readback time: {:.04}s, qsize = {}".format(time.time() - t, internal_buffer.qsize()))
-            else:
-                print("NOT preloading")
                 
 
             # Check if we need to start the next preload.
