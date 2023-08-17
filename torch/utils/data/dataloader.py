@@ -1034,8 +1034,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     assert return_data is None
                     resume_iteration_cnt -= 1
         # prime the prefetch loop
-        for _ in range(max(self._prefetch_factor, self._super_batch_size) * self._num_workers):
-            self._try_put_index()
+        n_initial_indices = 2 * max(self._prefetch_factor, self._super_batch_size) * self._num_workers
+        for i in range(n_initial_indices):
+            self._try_put_index(i < n_initial_indices // 2)
 
     def _try_get_data(self, timeout=_utils.MP_STATUS_CHECK_INTERVAL):
         # Tries to fetch data from `self._data_queue` once for a given timeout.     <- OUTDATED
@@ -1290,7 +1291,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
                 return out
 
-    def _try_put_index(self):
+    def _try_put_index(self, inc_outstanding = True):
         assert self._tasks_outstanding < max(self._super_batch_size, self._prefetch_factor) * self._num_workers
 
         try:
@@ -1309,7 +1310,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         self._index_queues[worker_queue_idx].put((self._send_idx, index))
         self._task_info[self._send_idx] = (worker_queue_idx,)
-        self._tasks_outstanding += 1
+        self._tasks_outstanding += inc_outstanding
         self._send_idx += 1
 
     def _process_data(self, data):
