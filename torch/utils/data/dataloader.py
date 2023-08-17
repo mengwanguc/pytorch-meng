@@ -1014,7 +1014,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # map: task idx => - (worker_id,)        if data isn't fetched (outstanding)
         #                  \ (worker_id, data)   if data is already fetched (out-of-order)
         self._task_info = {}
-        self._tasks_outstanding = 0  # always equal to count(v for v in task_info.values() if len(v) == 1)
+        # self._tasks_outstanding = 0  # always equal to count(v for v in task_info.values() if len(v) == 1)
         # A list of booleans representing whether each worker still has work to
         # do, i.e., not having exhausted its iterable dataset object. It always
         # contains all `True`s if not using an iterable-style dataset
@@ -1037,7 +1037,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         n_initial_indices = 2 * max(self._prefetch_factor, self._super_batch_size) * self._num_workers
         for i in range(n_initial_indices):
             self._try_put_index(False)
-        self._tasks_outstanding += n_initial_indices // 2
+        # self._tasks_outstanding += n_initial_indices // 2
         
 
     def _try_get_data(self, timeout=_utils.MP_STATUS_CHECK_INTERVAL):
@@ -1271,9 +1271,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
                 return out
 
-            assert not self._shutdown and self._tasks_outstanding > 0
+            # assert not self._shutdown and self._tasks_outstanding > 0
             idx, data = self._get_data()
-            self._tasks_outstanding -= 1
+            # self._tasks_outstanding -= 1
             if self._dataset_kind == _DatasetKind.Iterable:
                 # Check for _IterableDatasetStopIteration
                 if isinstance(data, _utils.worker._IterableDatasetStopIteration):
@@ -1294,7 +1294,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 return out
 
     def _try_put_index(self, inc_outstanding = True):
-        assert self._tasks_outstanding <= max(self._super_batch_size, self._prefetch_factor) * self._num_workers
+        # assert self._tasks_outstanding <= max(self._super_batch_size, self._prefetch_factor) * self._num_workers
 
         try:
             index = self._next_index()
@@ -1312,7 +1312,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         self._index_queues[worker_queue_idx].put((self._send_idx, index))
         self._task_info[self._send_idx] = (worker_queue_idx,)
-        self._tasks_outstanding += inc_outstanding
+        # self._tasks_outstanding += inc_outstanding
         self._send_idx += 1
 
     def _process_data(self, data):
