@@ -210,6 +210,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                     # Tuple(idx, Tuple(target, data))
                     internal_buffer.put((idx, unprocessed_data))
+                continue
                 
 
             # Check if we need to start the next preload.
