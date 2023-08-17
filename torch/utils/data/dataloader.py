@@ -1290,7 +1290,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 return out
 
     def _try_put_index(self):
-        assert self._tasks_outstanding < max(self._super_batch_size, self._prefetch_factor) * self._num_workers
+        assert self._tasks_outstanding < 2 * max(self._super_batch_size, self._prefetch_factor) * self._num_workers
 
         try:
             index = self._next_index()
