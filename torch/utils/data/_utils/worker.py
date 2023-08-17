@@ -260,6 +260,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                             all_idx.append(idx)
                             all_index.append(index)
                 except queue.Empty:
+                    print("index_queue.get() timeout")
                     pass
 
             # Don't handle this yet...

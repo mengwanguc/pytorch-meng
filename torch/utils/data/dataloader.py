@@ -1068,6 +1068,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 pids_str = ', '.join(str(w.pid) for w in failed_workers)
                 raise RuntimeError('DataLoader worker (pid(s) {}) exited unexpectedly'.format(pids_str)) from e
             if isinstance(e, queue.Empty):
+                print("_data_queue.get() timeout")
                 self._timing["try_get_data"].append((try_get_data_time_start, time.time() - try_get_data_time_start))
                 return (False, None)
             import tempfile
