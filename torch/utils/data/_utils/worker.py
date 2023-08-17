@@ -210,12 +210,14 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                     # Tuple(idx, Tuple(target, data))
                     internal_buffer.put((idx, unprocessed_data))
-                print("readback time: {:.04}s".format(time.time() - t))
+                print("readback time: {:.04}s, qsize = {}".format(time.time() - t, internal_buffer.qsize()))
 
             # Check if we need to start the next preload.
             if preloaded:
                 continue
             preloaded = True
+
+            t = time.time()
 
             # Get a list of <= SUPER_BATCH_SIZE batches.
             all_idx = [] # Indices of the batches themselves.
@@ -270,6 +272,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             data_request_start = time.time()
             fetcher.request(all_index)
             timing['data_request'].append((data_request_start, time.time() - data_request_start))
+
+            print("request time: {:.04}s".format(time.time() - t))
 
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
