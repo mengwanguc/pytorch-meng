@@ -211,7 +211,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     # Tuple(idx, Tuple(target, data))
                     internal_buffer.put((idx, unprocessed_data))
                 continue
-                
 
             # Check if we need to start the next preload.
             if preloaded or final_signal:
@@ -265,6 +264,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 assert False
 
             if not all_index:
+                print("empty all_index")
                 continue
             
             # In the form of List[Tuple(target, data)]
