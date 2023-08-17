@@ -174,10 +174,15 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         watchdog = ManagerWatchdog()
 
         timing = {
-            'data_fetch':[],
+            'data_request':[],      # Requests.
+            'data_readback':[],       # Readback.
             'internal_to_output':[],
         }
 
+
+        preloaded = False
+        all_idx = None
+        all_index = None
         while watchdog.is_alive() and (not final_signal or internal_buffer.qsize() > 0):                                                                          # REWORK
 
             # Always keep 1 processed data ready to go in the result queue.
@@ -194,13 +199,21 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     output_status[worker_id].value = False
 
                 timing['internal_to_output'].append((internal_to_output_start, time.time() - internal_to_output_start))
-                continue
-            elif internal_buffer.qsize() > 0:
-                continue
+            
+            # Check if the queue is empty and we've got a new superbatch preloaded
+            if internal_buffer.qsize() == 0 and preloaded:
+                preloaded = False
+                data_readback_start = time.time()
+                all_unprocessed_data = fetcher.readback(all_index)
+                timing['data_readback'].append((data_readback_start, time.time() - data_readback_start))
+                for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
+                    # Tuple(idx, Tuple(target, data))
+                    internal_buffer.put((idx, unprocessed_data))
 
-            # In the case where we cannot replenish the output buffer due to the
-            # internal buffer being empty, we need to re-fill the internal
-            # buffer by loading additional data.
+            # Check if we need to start the next preload.
+            if preloaded:
+                continue
+            preloaded = True
 
             # Get a list of <= SUPER_BATCH_SIZE batches.
             all_idx = [] # Indices of the batches themselves.
@@ -252,12 +265,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 continue
             
             # In the form of List[Tuple(target, data)]
-            data_fetch_start = time.time()
-            all_unprocessed_data = fetcher.fetch(all_index)
-            timing['data_fetch'].append((data_fetch_start, time.time() - data_fetch_start))
-            for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
-                # Tuple(idx, Tuple(target, data))
-                internal_buffer.put((idx, unprocessed_data))
+            data_request_start = time.time()
+            fetcher.request(all_index)
+            timing['data_request'].append((data_request_start, time.time() - data_request_start))
 
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.

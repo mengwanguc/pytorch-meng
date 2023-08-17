@@ -46,8 +46,8 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
         super(_MapDatasetFetcher, self).__init__(worker_id, dataset, auto_collation, collate_fn, drop_last)
 
-    def fetch(self, possibly_batched_index):
-        if self.dataset.load_indices:
-            return self.dataset.load_indices(self.async_worker, self.dataset, possibly_batched_index)
-        else:
-            assert False
+    def request(self, possibly_batched_index):
+        return self.dataset.load_indices_front(self.async_worker, self.dataset, possibly_batched_index)
+
+    def readback(self, possibly_batched_index):
+        return self.dataset.load_indices_back(self.async_worker, self.dataset, possibly_batched_index)
