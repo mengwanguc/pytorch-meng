@@ -206,7 +206,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
                 timing['internal_to_output'].append((internal_to_output_start, time.time() - internal_to_output_start))
             else:
-                print("status = {}, qsize = {} | ", end = "")
+                print("status = {}, qsize = {} | ".format(status, qsize), end = "")
             
             # Check if the queue is empty and we've got a new superbatch preloaded
             if internal_buffer.qsize() == 0 and preloaded:
