@@ -1036,7 +1036,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # prime the prefetch loop
         n_initial_indices = 2 * max(self._prefetch_factor, self._super_batch_size) * self._num_workers
         for i in range(n_initial_indices):
-            self._try_put_index(False)
+            self._try_put_index()
         # self._tasks_outstanding += n_initial_indices // 2
         
 
@@ -1293,7 +1293,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
                 return out
 
-    def _try_put_index(self, inc_outstanding = True):
+    def _try_put_index(self):
         # assert self._tasks_outstanding <= max(self._super_batch_size, self._prefetch_factor) * self._num_workers
 
         try:
@@ -1312,7 +1312,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         self._index_queues[worker_queue_idx].put((self._send_idx, index))
         self._task_info[self._send_idx] = (worker_queue_idx,)
-        # self._tasks_outstanding += inc_outstanding
+        # self._tasks_outstanding += 1
         self._send_idx += 1
 
     def _process_data(self, data):
