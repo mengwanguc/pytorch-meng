@@ -194,12 +194,12 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 internal_to_output_start = time.time()
 
                 idx, buffered = internal_buffer.get()
-                print("just got from internal buffer")
+                print(buffered)
+
                 t = time.time()
                 processed = [process_raw(dataset, raw_data, target) for target, raw_data in buffered]
                 print("preprocess time: {}".format(time.time() - t))
                 data_queue.put((worker_id, (idx, collate_fn(processed))))
-                print("just put into data queue")
                 with output_status[worker_id].get_lock():
                     output_status[worker_id].value = False
 
@@ -212,8 +212,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 preloaded = False
                 data_readback_start = time.time()
                 all_unprocessed_data = fetcher.readback(all_index)
-                print("len(all_unprocessed_data) = {}".format(len(all_unprocessed_data)))
-                print("len(all_unprocessed_data[0]) = {}".format(len(all_unprocessed_data[0])))
                 timing['data_readback'].append((data_readback_start, time.time() - data_readback_start))
                 for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                     # Tuple(idx, Tuple(target, data))
@@ -224,7 +222,6 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             # Check if we need to start the next preload.
             if preloaded:
                 continue
-            preloaded = True
 
             t = time.time()
 
@@ -282,6 +279,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             data_request_start = time.time()
             fetcher.request(all_index)
             timing['data_request'].append((data_request_start, time.time() - data_request_start))
+
+            preloaded = True
 
             print("request time: {:.04}s".format(time.time() - t))
 
