@@ -219,6 +219,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             # Get a list of <= SUPER_BATCH_SIZE batches.
             all_idx = [] # Indices of the batches themselves.
             all_index = [] # Batched indices of the files to be loaded.
+            print("fetching a superbatch! final_signal = {}, preloaded = {}".format(final_signal, preloaded))
             for _ in range(super_batch_size):
                 try:
                     r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
