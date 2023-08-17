@@ -211,11 +211,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     # Tuple(idx, Tuple(target, data))
                     internal_buffer.put((idx, unprocessed_data))
                 print("readback time: {:.04}s, qsize = {}".format(time.time() - t, internal_buffer.qsize()))
-
-            # Check if we need to start the next preload.
-            if preloaded:
+            elif preloaded:
                 continue
-            preloaded = True
 
             t = time.time()
 
@@ -271,6 +268,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             # In the form of List[Tuple(target, data)]
             data_request_start = time.time()
             fetcher.request(all_index)
+            preloaded = True
             timing['data_request'].append((data_request_start, time.time() - data_request_start))
 
             print("request time: {:.04}s".format(time.time() - t))
