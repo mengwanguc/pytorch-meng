@@ -245,6 +245,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     elif r is None:
                         # Received final signal. Verify conditions.
                         assert done_event.is_set() or iteration_end
+                        print("r is None")
                         final_signal = True
                         break
                     elif done_event.is_set() or iteration_end or r == -1:
@@ -253,6 +254,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                     else:
                         # If it wasn't a special case, append to be loaded.
                         idx, index = r
+                        print("other case (len(index = {}))".format(len(index)))
                         if len(index) > 0:
                             all_idx.append(idx)
                             all_index.append(index)
