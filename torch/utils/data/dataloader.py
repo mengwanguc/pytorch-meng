@@ -1036,7 +1036,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # prime the prefetch loop
         n_initial_indices = 2 * max(self._prefetch_factor, self._super_batch_size) * self._num_workers
         for i in range(n_initial_indices):
-            self._try_put_index(i < n_initial_indices // 2)
+            self._try_put_index(False)
+        self._tasks_outstanding += n_initial_indices // 2
+        
 
     def _try_get_data(self, timeout=_utils.MP_STATUS_CHECK_INTERVAL):
         # Tries to fetch data from `self._data_queue` once for a given timeout.     <- OUTDATED
