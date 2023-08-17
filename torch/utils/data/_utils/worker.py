@@ -212,6 +212,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 preloaded = False
                 data_readback_start = time.time()
                 all_unprocessed_data = fetcher.readback(all_index)
+                print("len(all_unprocessed_data) = {}".format(len(all_unprocessed_data)))
+                print("len(all_unprocessed_data[0]) = {}".format(len(all_unprocessed_data[0])))
                 timing['data_readback'].append((data_readback_start, time.time() - data_readback_start))
                 for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                     # Tuple(idx, Tuple(target, data))
