@@ -35,6 +35,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, max_output_leng
             with output_status[worker_id].get_lock():
                 output_status[worker_id].value = True
         except queue.Empty:
+            print("in_queue.get() timeout")
             continue
         idx, data = r
         if not done_event.is_set() and not isinstance(data, ExceptionWrapper):
@@ -75,6 +76,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
             with output_status[worker_id].get_lock():
                 output_status[worker_id].value = True
         except queue.Empty:
+            print("in_queue.get() timeout")
             continue
         
         pin_memory_time_start = time.time()
