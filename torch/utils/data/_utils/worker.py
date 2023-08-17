@@ -213,7 +213,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 
 
             # Check if we need to start the next preload.
-            if preloaded:
+            if preloaded or final_signal:
                 continue
 
             # Get a list of <= SUPER_BATCH_SIZE batches.
