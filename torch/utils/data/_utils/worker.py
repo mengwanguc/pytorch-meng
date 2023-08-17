@@ -194,8 +194,11 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 internal_to_output_start = time.time()
 
                 idx, buffered = internal_buffer.get()
+                print("just got from internal buffer")
                 processed = [process_raw(dataset, raw_data, target) for target, raw_data in buffered]
+                print("just preprocessed")
                 data_queue.put((worker_id, (idx, collate_fn(processed))))
+                print("just put into data queue")
                 with output_status[worker_id].get_lock():
                     output_status[worker_id].value = False
 
