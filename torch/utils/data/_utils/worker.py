@@ -177,6 +177,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             'data_request':[],      # Requests.
             'data_readback':[],       # Readback.
             'internal_to_output':[],
+            'index_queue_get':[],
+            'worked':[],
         }
 
 
