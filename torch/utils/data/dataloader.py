@@ -924,6 +924,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             "next_data":[],
             "get_data":[],
             "try_get_data":[],
+            "_process_data":[],
         }
         self._timing_file = open("pytorch_timing.csv", "w+")
         self._timing_file.write("worker_id,time_id,time,duration\n")
@@ -1257,7 +1258,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 self._timing_file_lock.acquire()
                 for key in self._timing:
                     for start, duration in self._timing[key]:
-                        self._timing_file.write("{},{},{},{}\n".format(-1, "next_data", start, duration))
+                        self._timing_file.write("{},{},{},{}\n".format(-1, key, start, duration))
                 self._timing_file_lock.release()
 
                 raise StopIteration
@@ -1267,7 +1268,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             # Check if the next sample has already been generated
             if len(self._task_info[self._rcvd_idx]) == 2:
                 data = self._task_info.pop(self._rcvd_idx)[1]
+                t = time.time()
                 out = self._process_data(data)
+                self._timing["_process_data"].append((t, time.time() - t))
                 self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
                 return out
 
@@ -1289,7 +1292,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 self._task_info[idx] += (data,)
             else:
                 del self._task_info[idx]
+                t = time.time()
                 out = self._process_data(data)
+                self._timing["_process_data"].append((t, time.time() - t))
                 self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
                 return out
 
