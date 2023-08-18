@@ -179,6 +179,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             'internal_to_output':[],
             'index_queue_get':[],
             'worked':[],
+            'worker_load_preload':[],
         }
 
 
@@ -190,8 +191,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         while watchdog.is_alive() and (not final_signal or internal_buffer.qsize() > 0):                                                                          # REWORK
             if worked:
                 timing["worked"].append((worked_start, time.time() - worked_start))
-                worked_start = time.time()
                 worked = False
+            worked_start = time.time()
 
             # Always keep 1 processed data ready to go in the result queue.
             status = output_status[worker_id].value
@@ -215,6 +216,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             if internal_buffer.qsize() == 0 and preloaded:
                 worked = True
 
+                t = time.time()
                 preloaded = False
                 data_readback_start = time.time()
                 all_unprocessed_data = fetcher.readback(all_index)
@@ -222,6 +224,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                     # Tuple(idx, Tuple(target, data))
                     internal_buffer.put((idx, unprocessed_data))
+                timing["worker_load_preload"].append((t, time.time() - t))
                 continue
 
             # Check if we need to start the next preload.
