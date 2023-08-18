@@ -182,6 +182,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             'worker_load_preload':[],
         }
 
+        idle_time = 0
+        last_did_work_at = time.time()
 
         preloaded = False
         all_idx = None
@@ -189,9 +191,12 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         worked = False
         worked_start = time.time()
         while watchdog.is_alive() and (not final_signal or internal_buffer.qsize() > 0):                                                                          # REWORK
-            if worked:
+            if not worked:
+                idle_time += time.time() - last_did_work_at
+            else:
                 timing["worked"].append((worked_start, time.time() - worked_start))
                 worked = False
+            last_did_work_at = time.time()
             worked_start = time.time()
 
             # Always keep 1 processed data ready to go in the result queue.
@@ -293,6 +298,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
+
+    timing["worker_idle"] = [(0, idle_time)]
 
     # Write output to our file
     timing_lock.acquire()
