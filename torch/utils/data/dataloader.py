@@ -924,7 +924,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             "next_data":[],
             "get_data":[],
             "try_get_data":[],
-            "_process_data":[],
+            "process_data":[],
+            "data_queue_get":[],
         }
         self._timing_file = open("pytorch_timing.csv", "w+")
         self._timing_file.write("worker_id,time_id,time,duration\n")
@@ -1056,7 +1057,9 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         try_get_data_time_start = time.time()
         try:
             # Get data round-robin style from each worker's output queue.
+            t = time.time()
             data = self._data_queue.get(timeout=timeout)
+            self._timing["data_queue_get"].append((t, time.time() - t))
             self._timing["try_get_data"].append((try_get_data_time_start, time.time() - try_get_data_time_start))
             return (True, data)
         except Exception as e:
@@ -1270,7 +1273,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 data = self._task_info.pop(self._rcvd_idx)[1]
                 t = time.time()
                 out = self._process_data(data)
-                self._timing["_process_data"].append((t, time.time() - t))
+                self._timing["process_data"].append((t, time.time() - t))
                 self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
                 return out
 
@@ -1294,7 +1297,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 del self._task_info[idx]
                 t = time.time()
                 out = self._process_data(data)
-                self._timing["_process_data"].append((t, time.time() - t))
+                self._timing["process_data"].append((t, time.time() - t))
                 self._timing["next_data"].append((next_data_time_start, time.time() - next_data_time_start))
                 return out
 

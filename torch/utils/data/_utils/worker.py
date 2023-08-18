@@ -183,7 +183,12 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         preloaded = False
         all_idx = None
         all_index = None
+        worked = False
+        worked_start = time.time()
         while watchdog.is_alive() and (not final_signal or internal_buffer.qsize() > 0):                                                                          # REWORK
+            if worked:
+                timing["worked"].append((worked_start, time.time() - worked_start))
+                worked_start = time.time()
 
             # Always keep 1 processed data ready to go in the result queue.
             status = output_status[worker_id].value
@@ -191,6 +196,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             if status and qsize > 0: # _output_status[i] checks whether this worker is allowed to insert into the output queue
                 # Take an item from the internal buffer, process it, and put
                 # it into the output buffer.
+
+                worked = True
 
                 internal_to_output_start = time.time()
                 idx, buffered = internal_buffer.get()
@@ -203,6 +210,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             
             # Check if the queue is empty and we've got a new superbatch preloaded
             if internal_buffer.qsize() == 0 and preloaded:
+                worked = True
+
                 preloaded = False
                 data_readback_start = time.time()
                 all_unprocessed_data = fetcher.readback(all_index)
@@ -215,13 +224,16 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             # Check if we need to start the next preload.
             if preloaded or final_signal:
                 continue
+            worked = True
 
             # Get a list of <= SUPER_BATCH_SIZE batches.
             all_idx = [] # Indices of the batches themselves.
             all_index = [] # Batched indices of the files to be loaded.
             for i in range(super_batch_size):
                 try:
+                    t = time.time()
                     r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+                    timing['index_queue_get'].append((t, time.time() - t))
 
                     # Perform the regular checks.
                     if isinstance(r, _ResumeIteration):
