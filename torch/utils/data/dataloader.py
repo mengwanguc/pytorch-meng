@@ -926,6 +926,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             "try_get_data":[],
             "process_data":[],
             "data_queue_get":[],
+            "try_put_index":[],
         }
         self._timing_file = open("pytorch_timing.csv", "w+")
         self._timing_file.write("worker_id,time_id,time,duration\n")
