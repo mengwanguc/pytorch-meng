@@ -191,6 +191,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             if worked:
                 timing["worked"].append((worked_start, time.time() - worked_start))
                 worked_start = time.time()
+                worked = False
 
             # Always keep 1 processed data ready to go in the result queue.
             status = output_status[worker_id].value
