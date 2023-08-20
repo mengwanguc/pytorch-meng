@@ -209,9 +209,16 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 worked = True
 
                 internal_to_output_start = time.time()
+
+                # print("{} starting to get from internal buffer. ".format(time.time()))
                 idx, buffered = internal_buffer.get()
+                # print("{} got data from internal buffer. ".format(time.time()))
+                # print("len(buffered): {}".format(len(buffered)))
                 processed = [process_raw(dataset, raw_data, target) for target, raw_data in buffered]
+                print("{} data_queue.put start . {}".format(time.time(), idx))
                 data_queue.put((worker_id, (idx, collate_fn(processed))))
+                print("{} data_queue.put ends. {}  {}".format(time.time(), idx, id(data_queue)))
+                print()
                 with output_status[worker_id].get_lock():
                     output_status[worker_id].value = False
 
@@ -225,10 +232,13 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 preloaded = False
                 data_readback_start = time.time()
                 all_unprocessed_data = fetcher.readback(all_index)
+                print("{} fetcher.readback. {}".format(time.time(), all_index))
                 timing['data_readback'].append((data_readback_start, time.time() - data_readback_start))
                 for idx, unprocessed_data in zip(all_idx, all_unprocessed_data):
                     # Tuple(idx, Tuple(target, data))
                     internal_buffer.put((idx, unprocessed_data))
+                print("{} internal_buffer.put done qsize: {} output_status[worker_id].value: {}".format(
+                            time.time(), internal_buffer.qsize(), output_status[worker_id].value))
                 timing["worker_load_preload"].append((t, time.time() - t))
                 continue
 
@@ -291,6 +301,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
             
             # In the form of List[Tuple(target, data)]
             data_request_start = time.time()
+            print("{} fetcher.request. {}".format(time.time(), all_index))
             fetcher.request(all_index)
             timing['data_request'].append((data_request_start, time.time() - data_request_start))
             preloaded = True

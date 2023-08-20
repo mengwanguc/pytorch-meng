@@ -1059,8 +1059,10 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         try:
             # Get data round-robin style from each worker's output queue.
             t = time.time()
+            print("{} trying to get data. queue size: {}".format(time.time(), self._data_queue.qsize()))
             data = self._data_queue.get(timeout=timeout)
             self._timing["data_queue_get"].append((t, time.time() - t))
+            print("self._data_queue.get time: {}".format(time.time() - t))
             self._timing["try_get_data"].append((try_get_data_time_start, time.time() - try_get_data_time_start))
             return (True, data)
         except Exception as e:

@@ -80,6 +80,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
 
         try:
             worker_id, r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
+            print("{} pin_memory_thread got data from in_queeu. worker_id: {}  MP_STATUS_CHECK_INTERVAL: {}".format(time.time(), worker_id, MP_STATUS_CHECK_INTERVAL))
             if worker_id == None:
                 last_work_done_at = time.time()
                 continue
@@ -145,6 +146,7 @@ def _emulate_pin_memory_loop(in_queue, out_queue, device_id, done_event, estimat
         while not done_event.is_set():
             try:
                 out_queue.put(r, timeout=MP_STATUS_CHECK_INTERVAL)
+                print("{} pin_memory done. queue size: {}".format(time.time(), out_queue.qsize()))
                 break
             except queue.Full:
                 continue
