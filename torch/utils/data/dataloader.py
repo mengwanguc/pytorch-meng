@@ -1389,7 +1389,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     self._worker_result_queue.put((None, None))
                     self._pin_memory_thread.join()
                     # self._worker_result_queue.cancel_join_thread()
-                    self._worker_result_queue.close()
+                    # self._worker_result_queue.close()
 
                 # Exit workers now.
                 self._workers_done_event.set()
@@ -1408,7 +1408,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     w.join(timeout=_utils.MP_STATUS_CHECK_INTERVAL)
                 for q in self._index_queues:
                     # q.cancel_join_thread()
-                    q.close()
+                    # q.close()
+                    pass
             finally:
                 # Even though all this function does is putting into queues that
                 # we have called `cancel_join_thread` on, weird things can

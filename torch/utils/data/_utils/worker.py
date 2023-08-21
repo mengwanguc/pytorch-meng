@@ -316,4 +316,5 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
 
     if done_event.is_set():
         # data_queue.cancel_join_thread()
-        data_queue.close()
+        # data_queue.close()
+        pass
