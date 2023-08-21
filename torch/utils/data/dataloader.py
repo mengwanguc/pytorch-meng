@@ -916,7 +916,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._workers_done_event = multiprocessing_context.Event()
 
         self._next_worker_idx = 0
-        self._worker_internal_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
         self._output_status = [multiprocessing_context.Value(c_bool, True) for _ in range(self._num_workers)]
 
         # Profiling data
@@ -950,8 +949,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                       self._auto_collation, self._collate_fn, self._drop_last,
                       self._base_seed + i, self._worker_init_fn, i, self._num_workers,
                       self._persistent_workers, self._super_batch_size, self._process_raw,
-                      self._worker_internal_buffers[i], self._output_status,
-                      self._timing_file, self._timing_file_lock))
+                      self._output_status, self._timing_file, self._timing_file_lock))
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.

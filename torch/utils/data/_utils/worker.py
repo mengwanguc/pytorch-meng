@@ -123,7 +123,7 @@ class _ResumeIteration(object):
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
                  num_workers, persistent_workers, super_batch_size, process_raw,
-                 internal_buffer, output_status, timing_file, timing_lock):
+                 output_status, timing_file, timing_lock):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -138,6 +138,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         torch.set_num_threads(1)
         random.seed(seed)
         torch.manual_seed(seed)
+
+        # Regular old private queue to buffer 
+        internal_buffer = queue.Queue()
 
         global _worker_info
         _worker_info = WorkerInfo(id=worker_id, num_workers=num_workers,
