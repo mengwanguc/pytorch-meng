@@ -942,7 +942,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             index_queue = multiprocessing_context.Queue()  # type: ignore
             # Need to `cancel_join_thread` here!
             # See sections (2) and (3b) above.
-            index_queue.cancel_join_thread()
+            # index_queue.cancel_join_thread()
             w = multiprocessing_context.Process(
                 target=_utils.worker._worker_loop,
                 args=(self._dataset_kind, self._dataset, index_queue,
@@ -1388,7 +1388,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     # so that it can wake up and check `pin_memory_thread_done_event`
                     self._worker_result_queue.put((None, None))
                     self._pin_memory_thread.join()
-                    self._worker_result_queue.cancel_join_thread()
+                    # self._worker_result_queue.cancel_join_thread()
                     self._worker_result_queue.close()
 
                 # Exit workers now.
@@ -1407,7 +1407,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     # they are killed in the `finally` block.
                     w.join(timeout=_utils.MP_STATUS_CHECK_INTERVAL)
                 for q in self._index_queues:
-                    q.cancel_join_thread()
+                    # q.cancel_join_thread()
                     q.close()
             finally:
                 # Even though all this function does is putting into queues that
