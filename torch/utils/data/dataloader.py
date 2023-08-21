@@ -910,13 +910,13 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._worker_init_fn = loader.worker_init_fn
         self._worker_queue_idx_cycle = itertools.cycle(range(self._num_workers))
         # No certainty which module multiprocessing_context is
-        self._worker_result_queue = multiprocessing_context.Queue()  # type: ignore
+        self._worker_result_queue = multiprocessing_context.Manager().Queue()  # type: ignore
         self._worker_pids_set = False
         self._shutdown = False
         self._workers_done_event = multiprocessing_context.Event()
 
         self._next_worker_idx = 0
-        self._worker_internal_buffers = [multiprocessing_context.Queue() for _ in range(self._num_workers)]
+        self._worker_internal_buffers = [multiprocessing_context.Manager().Queue() for _ in range(self._num_workers)]
         self._output_status = [multiprocessing_context.Value(c_bool, True) for _ in range(self._num_workers)]
 
         # Profiling data
