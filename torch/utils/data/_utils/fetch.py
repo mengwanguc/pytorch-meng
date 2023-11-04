@@ -10,9 +10,13 @@ class _BaseDatasetFetcher(object):
     def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
         self.worker_id = worker_id
         if dataset.async_loader:
-            self.async_worker = dataset.async_loader.get_worker_context(worker_id)
+            print("AAAA")
+            self.user_state = dataset.async_loader.get_worker_context(worker_id)
+        elif dataset.ladcache:
+            print("BBBB")
+            self.user_state = dataset.ladcache.get_user_state(worker_id)
         else:
-            self.async_worker = None
+            self.user_state = None
         self.dataset = dataset
         self.auto_collation = auto_collation
         self.collate_fn = collate_fn
@@ -49,7 +53,7 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             if self.dataset.load_indices:
-                data = self.dataset.load_indices(self.async_worker, self.dataset, possibly_batched_index)
+                data = self.dataset.load_indices(self.user_state, self.dataset, possibly_batched_index)
             else:
                 data = [self.dataset[index] for index in possibly_batched_index]
 
