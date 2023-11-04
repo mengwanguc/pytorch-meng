@@ -304,17 +304,17 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
     timing["worker_idle"] = [(0, idle_time)]
 
     # Write output to our file
-    timing_lock.acquire()
-    for key in timing:
-        for val in timing[key]:
-            timing_file.write("{},{},{},{}\n".format(
-                worker_id,
-                key,    # label
-                val[0], # time
-                val[1]  # duration
-            ))
-    timing_file.close()
-    timing_lock.release()
+    # timing_lock.acquire()
+    # for key in timing:
+    #     for val in timing[key]:
+    #         timing_file.write("{},{},{},{}\n".format(
+    #             worker_id,
+    #             key,    # label
+    #             val[0], # time
+    #             val[1]  # duration
+    #         ))
+    # timing_file.close()
+    # timing_lock.release()
 
     if done_event.is_set():
         # data_queue.cancel_join_thread()
