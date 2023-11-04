@@ -10,10 +10,8 @@ class _BaseDatasetFetcher(object):
     def __init__(self, worker_id, dataset, auto_collation, collate_fn, drop_last):
         self.worker_id = worker_id
         if dataset.async_loader:
-            print("AAAA")
             self.user_state = dataset.async_loader.get_worker_context(worker_id)
         elif dataset.ladcache:
-            print("BBBB")
             self.user_state = dataset.ladcache.get_user_state(worker_id)
         else:
             self.user_state = None
