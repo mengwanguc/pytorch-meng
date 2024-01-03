@@ -93,6 +93,7 @@ class DistributedSampler(Sampler[T_co]):
         self.total_size = self.num_samples * self.num_replicas
         self.shuffle = shuffle
         self.seed = seed
+        self.locality_aware = locality_aware
 
     def __iter__(self) -> Iterator[T_co]:
         if self.shuffle:
