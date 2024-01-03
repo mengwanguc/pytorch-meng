@@ -58,7 +58,8 @@ class DistributedSampler(Sampler[T_co]):
 
     def __init__(self, dataset: Dataset, num_replicas: Optional[int] = None,
                  rank: Optional[int] = None, shuffle: bool = True,
-                 seed: int = 0, drop_last: bool = False) -> None:
+                 seed: int = 0, drop_last: bool = False,
+                 locality_aware: bool = False) -> None:
         if num_replicas is None:
             if not dist.is_available():
                 raise RuntimeError("Requires distributed package to be available")
@@ -97,7 +98,10 @@ class DistributedSampler(Sampler[T_co]):
         if self.shuffle:
             # deterministically shuffle based on epoch and seed
             g = torch.Generator()
-            g.manual_seed(self.seed + self.epoch)
+            if self.locality_aware: # for ladcache optimization
+                g.manual_seed(self.seed)
+            else:
+                g.manual_seed(self.seed + self.epoch)
             indices = torch.randperm(len(self.dataset), generator=g).tolist()  # type: ignore
         else:
             indices = list(range(len(self.dataset)))  # type: ignore
