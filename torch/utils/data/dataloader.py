@@ -527,10 +527,15 @@ class _BaseDataLoaderIter(object):
         raise NotImplementedError
 
     def __next__(self) -> Any:
+        # print("__next__ start time: {}".format(time.time()))
         with torch.autograd.profiler.record_function(self._profile_name):
             if self._sampler_iter is None:
                 self._reset()
+            _next_data_start = time.time()
             data = self._next_data()
+            _next_data_end = time.time()
+            print("  before self._next_data() time: {}".format(_next_data_start))
+            print("  after self._next_data() time: {}".format(_next_data_end))
             self._num_yielded += 1
             if self._dataset_kind == _DatasetKind.Iterable and \
                     self._IterableDataset_len_called is not None and \
@@ -543,7 +548,7 @@ class _BaseDataLoaderIter(object):
                                  "IterableDataset replica at each worker. Please see "
                                  "https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset for examples.")
                 warnings.warn(warn_msg)
-            # print("__next__ end time: {}".format(time.time()))
+            print("__next__ end time: {}".format(time.time()))
             return data
 
     next = __next__  # Python 2 compatibility

@@ -3,6 +3,7 @@ data from an iterable-style or map-style dataset. This logic is shared in both
 single- and multi-processing data loading.
 """
 
+import time
 
 class _BaseDatasetFetcher(object):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
@@ -47,7 +48,10 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
                 data = self.dataset[possibly_batched_index]
             return self.collate_fn(data)
         if self.auto_collation:
+            start = time.time()
             data = [self.dataset[idx] for idx in possibly_batched_index]
+            end = time.time()
+            print(f'batch loading time: {end-start}')
         else:
             data = self.dataset[possibly_batched_index]
         return self.collate_fn(data)

@@ -13,6 +13,8 @@ from torch._utils import ExceptionWrapper
 from typing import Union
 from . import signal_handling, MP_STATUS_CHECK_INTERVAL, IS_WINDOWS
 
+import time
+
 if IS_WINDOWS:
     import ctypes
     from ctypes.wintypes import DWORD, BOOL, HANDLE
@@ -175,6 +177,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
             except queue.Empty:
                 continue
+            print(f'    worker start to get index: {time.time()}')
             if isinstance(r, _ResumeIteration):
                 # Acknowledge the main process
                 data_queue.put((r, None))
@@ -199,7 +202,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 init_exception = None
             else:
                 try:
+                    print(f'    - worker start fetch: {time.time()}')
                     data = fetcher.fetch(index)
+                    print(f'    - worker end fetch: {time.time()}')
                 except Exception as e:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         data = _IterableDatasetStopIteration(worker_id)
@@ -213,8 +218,11 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
                         data = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
+            print(f'    - worker put worker_result_queue start: {time.time()}')
             data_queue.put((idx, data))
+            print(f'    - worker put worker_result_queue end: {time.time()}')
             del data, idx, index, r  # save memory
+            print(f'    worker finished deleting variables: {time.time()}')
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.
         pass
