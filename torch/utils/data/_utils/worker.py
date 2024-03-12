@@ -121,7 +121,8 @@ class _ResumeIteration(object):
 
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                  auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
-                 num_workers, persistent_workers):
+                 num_workers, persistent_workers,
+                 epoch, shared_prep_time, shared_prep_size):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
 
@@ -214,6 +215,11 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         data = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
             data_queue.put((idx, data))
+            if epoch == 0:
+                for i in index:
+                    shared_prep_time[i] = dataset.times[i]
+                    shared_prep_size[i] = dataset.sizes[i]
+
             del data, idx, index, r  # save memory
     except KeyboardInterrupt:
         # Main process will raise KeyboardInterrupt anyways.

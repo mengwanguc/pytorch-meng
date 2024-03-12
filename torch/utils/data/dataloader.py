@@ -293,6 +293,34 @@ class DataLoader(Generic[T_co]):
 
         self.check_worker_number_rationality()
 
+        self.epoch = 0
+
+        self.manager = multiprocessing.Manager()
+        self.shared_prep_times = []
+        self.shared_prep_sizes = []
+        for i in range(num_workers):
+            shared_prep_time = self.manager.dict()
+            shared_prep_size = self.manager.dict()
+            self.shared_prep_times.append(shared_prep_time)
+            self.shared_prep_sizes.append(shared_prep_size)
+        
+        self.prep_times = {}
+        self.prep_sizes = {}
+    
+    def aggregate_profiling_stores(self):
+        for i in range(self.num_workers):
+            self.prep_times.update(self.shared_prep_times[i])
+            self.prep_sizes.update(self.shared_prep_sizes[i])
+        
+    def get_prep_times(self):
+        return self.prep_times
+    
+    def get_prep_sizes(self):
+        return self.prep_sizes
+    
+    def set_epoch(self, epoch):
+        self.epoch = epoch
+
     def _get_iterator(self) -> '_BaseDataLoaderIter':
         if self.num_workers == 0:
             return _SingleProcessDataLoaderIter(self)
@@ -897,13 +925,22 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             # Need to `cancel_join_thread` here!
             # See sections (2) and (3b) above.
             index_queue.cancel_join_thread()
+            
+            shared_prep_time = None
+            shared_prep_size = None
+            if loader.epoch == 0:
+                shared_prep_time = loader.shared_prep_times[i]
+                shared_prep_size = loader.shared_prep_sizes[i]
+
             w = multiprocessing_context.Process(
                 target=_utils.worker._worker_loop,
                 args=(self._dataset_kind, self._dataset, index_queue,
                       self._worker_result_queue, self._workers_done_event,
                       self._auto_collation, self._collate_fn, self._drop_last,
                       self._base_seed + i, self._worker_init_fn, i, self._num_workers,
-                      self._persistent_workers))
+                      self._persistent_workers,
+                      loader.epoch, 
+                      shared_prep_time, shared_prep_size))
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.
